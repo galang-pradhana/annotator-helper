@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annotator Pro - Dokumentasi Interaktif</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Mermaid JS -->
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    </script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#3b82f6', background: '#f8fafc' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f8fafc; color: #1e293b; }
+        .glass-sidebar {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(226, 232, 240, 0.6);
+        }
+        .section-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            border: 1px solid #f1f5f9;
+            padding: 40px;
+            margin-bottom: 40px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .section-card:hover {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+        }
+        h1, h2, h3 { color: #0f172a; font-weight: 700; letter-spacing: -0.025em; }
+        .prose p { margin-bottom: 1.25rem; line-height: 1.7; color: #475569; }
+        .prose ul, .prose ol { margin-bottom: 1.25rem; padding-left: 1.5rem; color: #475569; }
+        .prose li { margin-bottom: 0.5rem; }
+        .prose pre { background: #0f172a; padding: 1rem; border-radius: 8px; color: #e2e8f0; font-family: monospace; overflow-x: auto; font-size: 0.9em; }
+        .prose code { background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #db2777; }
+        .prose table { width: 100%; border-collapse: collapse; margin-block: 1rem; }
+        .prose th { background: #f8fafc; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #0f172a; }
+        .prose td { padding: 12px; border-bottom: 1px solid #f1f5f9; color: #475569; font-size: 0.95em; }
+        .nav-link.active {
+            background: #eff6ff; color: #2563eb; font-weight: 600; border-left: 4px solid #3b82f6;
+        }
+        .nav-link {
+            border-left: 4px solid transparent;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-72 fixed inset-y-0 left-0 z-50 glass-sidebar flex flex-col hidden lg:flex">
+        <div class="px-6 py-8 border-b border-slate-200">
+            <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                Annotator Pro
+            </h1>
+            <p class="text-sm text-slate-500 mt-2 font-medium">Buku Panduan Pemula</p>
+        </div>
+        <nav class="flex-1 overflow-y-auto w-full py-4" id="sidebar-nav">
+            <ul class="space-y-1">
+                <li><a href="#overview" class="nav-link block px-6 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">1. Overview</a></li>
+                <li><a href="#cara-menjalankan" class="nav-link block px-6 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">2. Cara Menjalankan</a></li>
+                <li><a href="#arsitektur" class="nav-link block px-6 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">3. Arsitektur Sistem</a></li>
+                <li><a href="#relasi-database" class="nav-link block px-6 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">4. Relasi Database</a></li>
+                <li><a href="#fitur-utama" class="nav-link block px-6 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">5. Fitur Utama</a></li>
+                <li><a href="#detail-fungsi" class="nav-link block px-6 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">6. Detail Fungsi</a></li>
+                <li><a href="#troubleshooting" class="nav-link block px-6 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">7. Troubleshooting</a></li>
+                <li><a href="#playbook" class="nav-link block px-6 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">8. Playbook Maintenance</a></li>
+                <li><a href="#glossary" class="nav-link block px-6 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">9. Glossary (Kamus)</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 lg:pl-72 focus:outline-none overflow-x-hidden">
+        <div class="max-w-5xl mx-auto px-6 py-12 prose">
+            
+            <header class="mb-12 text-center lg:text-left">
+                <span class="inline-block py-1.5 px-4 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold tracking-wide mb-4">CONFIDENTIAL & INTERNAL</span>
+                <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6 drop-shadow-sm">Dokumentasi Annotator Pro</h1>
+                <p class="text-xl text-slate-500 max-w-2xl">Panduan bahasa awam yang super detail agar siapa pun bisa membongkar, mengelola, dan merawat bot ini tanpa harus jago coding.</p>
+            </header>
+
+            <!-- 1. OVERVIEW -->
+            <section id="overview" class="section-card js-section">
+                <h2 class="text-3xl mb-6 text-blue-600 flex items-center gap-3">
+                    <span class="bg-blue-100 p-2 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span>
+                    1. Overview
+                </h2>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl mt-0">Tujuan Utama Aplikasi</h3>
+                        <p>Annotator Pro adalah asisten bot Telegram pintar berbasis kecerdasan buatan (AI) yang berfungsi untuk mengevaluasi teks dan gambar. Bayangkan seperti guru penilai otomatis—pengguna mengirimkan pekerjaan, dan bot otomatis memberi komentar atau perbaikan.</p>
+                        <p>Untuk mencegah kebangkrutan server, bot ini memakai sistem "Sistem Koin" <em>(Credit-Based Billing)</em> dimana setiap kali bertanya ke AI, saldo koin kita otomatis terpotong.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-xl mt-0">User Flow (Alur Jalan)</h3>
+                        <ol class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                            <li><span class="font-semibold text-slate-700">Chat & Daftar:</span> Budi nge-chat bot dan diberi bonus koin.</li>
+                            <li><span class="font-semibold text-slate-700">Pilih Menu:</span> Budi memilih mau ngecek tulisan atau ngecek gambar.</li>
+                            <li><span class="font-semibold text-slate-700">Pengolahan:</span> Bot merapikan pesannya, menelpon otak AI.</li>
+                            <li><span class="font-semibold text-slate-700">Balasan:</span> Bot menerima hasil, koin Budi dipotong, jawaban muncul di HP Budi.</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. CARA MENJALANKAN -->
+            <section id="cara-menjalankan" class="section-card js-section">
+                <h2 class="text-3xl mb-6 text-emerald-600 flex items-center gap-3">
+                    <span class="bg-emerald-100 p-2 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span>
+                    2. Cara Menjalankan Bot di Lokal
+                </h2>
+                <div class="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+                    <p class="text-amber-800 m-0 font-medium"><strong>Catatan Penting:</strong> Pastikan kamu sudah menginstall Python 3.9+ di laptopmu agar bisa menjalankan bot ini.</p>
+                </div>
+                
+                <h3 class="mt-4">Langkah Instalasi Mesin</h3>
+                <ul class="list-decimal marker:text-emerald-500 marker:font-bold">
+                    <li>Buka folder kode bot ini di <strong>Terminal/Command Prompt</strong>.</li>
+                    <li>Bikin <em>ruang kedap khusus</em> biar tidak bentrok aplikasinya:<br> <code>python -m venv venv</code></li>
+                    <li>Nyalakan ruang tertutup tadi:<br> 
+                        (Di Mac/Linux) <code>source venv/bin/activate</code> <br>
+                        (Di Windows) <code>venv\Scripts\activate</code>
+                    </li>
+                    <li>Download & pasang mesin pelengkap:<br> <code>pip install -r requirements.txt</code></li>
+                    <li>Buka bot kesayanganmu:<br> <code>python bot.py</code></li>
+                </ul>
+
+                <h3 class="mt-8 border-t pt-6 text-slate-800">Persiapan File Wajib (.env)</h3>
+                <p>Bot ini menolak menyala sebelum kamu bikin 1 file misterius pelindung password bernana <code>.env</code>. Isikan dengan:</p>
+                <div class="bg-slate-900 rounded-lg p-1 text-sm shadow-inner uppercase tracking-wider text-slate-400">
+                    <pre><code>TELEGRAM_TOKEN=123...abc (Minta tiket dari @BotFather di telegram)
+DATABASE_URL=sqlite:///bot.db (Atau alamat cloud Postgres)
+KIE_API_KEY=rahasianegara123 (Tiket buat nyambung ke otak AI)</code></pre>
+                </div>
+                <p class="mt-4 text-sm text-slate-500">Bila sewaktu-waktu bot macet tidak balas pesan, cepat buka Notepad dan lihat isi file <code>bot_logs.txt</code> karena di sanalah aplikasi menulis jeritan error terakhirnya.</p>
+            </section>
+
+            <!-- 3. ARSITEKTUR -->
+            <section id="arsitektur" class="section-card js-section">
+                <h2 class="text-3xl mb-6 text-indigo-600 flex items-center gap-3">
+                    <span class="bg-indigo-100 p-2 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></span>
+                    3. Arsitektur Sistem
+                </h2>
+                
+                <h3 class="mb-4">Perkenalan Tokoh Utama Kode Kita:</h3>
+                <div class="grid sm:grid-cols-2 gap-4 mb-8">
+                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                        <strong class="text-indigo-800">bot.py (Sang Jenderal Muka)</strong>
+                        <p class="text-sm mt-1 mb-0">Dia yang ngurusin balasan chat "Hai, ini menu kami". Kalau mau ubah sapaan awal, edit orang ini.</p>
+                    </div>
+                    <div class="bg-rose-50 p-4 rounded-xl border border-rose-100">
+                        <strong class="text-rose-800">user_service.py (Sang Kasir)</strong>
+                        <p class="text-sm mt-1 mb-0">Petugas matematika. Kalau mau rubah bonus koin saat daftar dari 500 jadi 1000, temui dia.</p>
+                    </div>
+                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                        <strong class="text-amber-800">prompt_assembler.py (Tukang Packing)</strong>
+                        <p class="text-sm mt-1 mb-0">Dia memastikan pertanyaan ditambahi salam dan instruksi lengkap ke AI.</p>
+                    </div>
+                    <div class="bg-teal-50 p-4 rounded-xl border border-teal-100">
+                        <strong class="text-teal-800">assets/ (Kardus Gudang)</strong>
+                        <p class="text-sm mt-1 mb-0">Folder rahasia yang isinya cuma file file markdown instruksi super panjang AI dari si ahli bahasa.</p>
+                    </div>
+                </div>
+
+                <h3 class="text-slate-800">Peta Denah Rumah (Mermaid):</h3>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 mt-4 overflow-x-auto shadow-inner flex justify-center">
+                    <div class="mermaid">
+                    graph TD
+                        A((Pengguna Telegram)) -->|Ketik /mulai| B[bot.py: Satpam Depan]
+                        B -->|Cek Koin Orang Ini| C[user_service.py: Kasir]
+                        C -->|Tulis Catatan| D[(Database Poin)]
+                        B -->|Kirim Kerjaan| E[prompt_assembler.py: Tukang Lipat Kertas]
+                        E -->|Tanya| F[kie_api.py: Kurir Otak AI]
+                        F -.->|Hasil Otak| B
+                        B -.->|Kirim SMS Balasan| A
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. RELASI DATABASE -->
+            <section id="relasi-database" class="section-card js-section">
+                <h2 class="text-3xl mb-6 text-purple-600 flex items-center gap-3">
+                    <span class="bg-purple-100 p-2 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg></span>
+                    4. Relasi Database (Laci Penyimpanan)
+                </h2>
+                <p>Aplikasi ini memiliki 4 tabel utama. Bayangkan tabel ini sebagai Excel yang terhubung satu sama lain.</p>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 overflow-x-auto flex justify-center my-6 shadow-inner">
+                    <div class="mermaid">
+                    erDiagram
+                        USERS ||--o{ TRANSACTIONS : "punya bon belanja"
+                        USERS ||--o{ EVALUATIONS : "punya riwayat ketikan"
+                        PROJECTS ||--o{ TASKS : "memiliki anak menu"
+                        
+                        USERS {
+                            int user_id "ID Rahasia Telegram"
+                            int balance "Saldo Koin saat ini"
+                        }
+                        TRANSACTIONS {
+                            int amount "+Tambah / -Kurang"
+                            string type "topup/deduction"
+                        }
+                        EVALUATIONS {
+                            string ai_output "Jawaban AI"
+                            string feedback "Good/Bad pencetan"
+                        }
+                    </div>
+                </div>
+                <div class="grid sm:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-purple-600 font-bold bg-purple-50 px-3 py-1 inline-block rounded">Tabel `users`</h4>
+                        <p class="text-sm mt-2">Buku Absen. Saat temanmu pertama kali chat, ID telegram dia, bahasa pilihan dia, dan koin dia tersimpan selamanya disini sampai dihapus.</p>
+                    </div>
+                    <div>
+                        <h4 class="text-purple-600 font-bold bg-purple-50 px-3 py-1 inline-block rounded">Tabel `transactions`</h4>
+                        <p class="text-sm mt-2">Buku Laporan Kas. Isinya "Tgl 5: Budi potong 5 poin karena nanya PR" atau "Tgl 6: Budi di topup Bos 100 poin". Gunanya agar si Budi tidak bisa berbohong saldo koinnya hilang mendadak.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. FITUR UTAMA -->
+            <section id="fitur-utama" class="section-card js-section">
+                <h2 class="text-3xl mb-6 text-fuchsia-600 flex items-center gap-3">
+                    <span class="bg-fuchsia-100 p-2 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg></span>
+                    5. Fitur & Fungsi Utama
+                </h2>
+
+                <!-- Fitur 1 -->
+                <div class="mb-8 border border-slate-100 p-6 rounded-2xl bg-gradient-to-br from-white to-slate-50 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-pink-100 rounded-full blur-3xl -mr-10 -mt-10 opacity-60"></div>
+                    <h3 class="text-2xl mt-0 text-slate-800">A. Mengecek Teks (PR & AFM)</h3>
+                    <p class="text-sm">Merupakan tugas dasar dimana bot dikasih bacaan dan disuruh meralat kesalahan gaya dan tata bahasanya.</p>
+                    <ul class="text-sm bg-white/60 p-4 rounded-lg my-3 list-disc">
+                        <li><strong>Kode yang Mengurus:</strong> <code>bot.py</code> (cari `process_segmented_input`)</li>
+                        <li><strong>Kronologi Kejadian:</strong> User masuk ke Menu Teks ➔ Bot pinta Input teks ➔ Bot kirim kotak ke AI KIE ➔ Saldo terpotong ➔ Pesan balasan muncul.</li>
+                    </ul>
+                    <div class="bg-rose-50 text-rose-800 p-3 rounded-lg border border-rose-200 mt-4 text-sm font-medium">
+                        <strong class="text-rose-900 block mb-1">🛠 Cara Rubah Kalau Mau Diedit:</strong>
+                        Buka bot.py, ketikan "process_segmented_input" di fitur pencarian. Di sana ada tulisan <code class="bg-rose-100 px-1 py-0.5 rounded">await update.message.reply_text("Berikut hasilnya")</code>. Jika kata balasan itu mau diganti "Nih Bos Hasilnya", ubahnya disitu. Warning: AWAS salah hapus kode deduction, saldo bisa jadi tak pernah dipotong!
+                    </div>
+                </div>
+
+                <!-- Fitur 2 -->
+                <div class="mb-8 border border-slate-100 p-6 rounded-2xl bg-gradient-to-br from-white to-slate-50 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-100 rounded-full blur-3xl -mr-10 -mt-10 opacity-60"></div>
+                    <h3 class="text-2xl mt-0 text-slate-800">B. Menilai 4 Gambar Seri (VCG)</h3>
+                    <p class="text-sm">Fitur visual dimana bot disuruh lihat 4 gambar. Bot jadi seperti juri pencari bakat yang merangkum mana gambar yang sempurna dan ada cacat piksel.</p>
+                    <ul class="text-sm bg-white/60 p-4 rounded-lg my-3 list-disc">
+                        <li><strong>Kode yang Mengurus:</strong> <code>bot.py</code> (cari `process_vcg_images`)</li>
+                        <li><strong>Kronologi Kejadian:</strong> User disuruh upload foto tahap 1 ➔ sistem catat ID ➔ Upload foto 2, 3, dan 4 ➔ sistem meremas 4 foto jadi Text Base64 ➔ Dikirim ke Server.</li>
+                    </ul>
+                    <div class="bg-rose-50 text-rose-800 p-3 rounded-lg border border-rose-200 mt-4 text-sm font-medium">
+                        <strong class="text-rose-900 block mb-1">🛠 Cara Rubah Kalau Mau Diedit:</strong>
+                        Kalau tiba-tiba ada bug orang ngestuck setelah gambar 3, buka blok coding <code>ConversationHandler</code> di tengah-tengah bot.py. Pastikan rute <code>VCG_IMAGE_C</code> melompat ke <code>VCG_IMAGE_D</code> tanpa ada huruf salah ketik (typo).
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- 6. DETAIL FUNGSI -->
+            <section id="detail-fungsi" class="section-card js-section">
+                <h2 class="text-3xl mb-6 text-orange-600 flex items-center gap-3">
+                    <span class="bg-orange-100 p-2 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></span>
+                    6. Detail Function Mapping
+                </h2>
+                <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                    <table class="w-full text-left" style="min-width: 800px;">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700">
+                                <th class="p-3">File Asal</th>
+                                <th class="p-3">Nama Mesin (Function)</th>
+                                <th class="p-3">Makan Umpan Apa?</th>
+                                <th class="p-3">Membuang Hasil Apa?</th>
+                                <th class="p-3">Siapa Pemanggilnya?</th>
+                                <th class="p-3">Error Yang Sering Terjadi</th>
+                                <th class="p-3">Obatnya</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-sm">
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3 font-mono text-xs text-orange-600">user_service.py</td>
+                                <td class="p-3 font-semibold"><code>deduct_balance</code></td>
+                                <td class="p-3">ID Telegram User & Harga Menu</td>
+                                <td class="p-3">Nilai sisa Saldo Koin barunya</td>
+                                <td class="p-3"><code>bot.py</code> (setiap usai dapat balasan)</td>
+                                <td class="p-3 text-rose-500">Saldo kurang dari batas (< 0)</td>
+                                <td class="p-3">Beri pesan "Mohon maaf koin mu ludes bro" dan STOP prosesnya.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3 font-mono text-xs text-orange-600">prompt_assembler.py</td>
+                                <td class="p-3 font-semibold"><code>assemble_evaluator_prompt</code></td>
+                                <td class="p-3">Kata yang diketik user</td>
+                                <td class="p-3">Kertas panjang yang isinya instruksi dewa AI</td>
+                                <td class="p-3"><code>bot.py</code> (sebelum ditelpon ke AI)</td>
+                                <td class="p-3 text-rose-500">File Markdown .md Hilang</td>
+                                <td class="p-3">Cek kembali isi lemari folder <code>assets/inputs/</code>, jangan asal di-Rename / dipindah isinya.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3 font-mono text-xs text-orange-600">kie_api.py</td>
+                                <td class="p-3 font-semibold"><code>call_kie_ai_api</code></td>
+                                <td class="p-3">Prompt siaran (teks utuh)</td>
+                                <td class="p-3">Kata-kata bijak hasil dari AI (Response AI)</td>
+                                <td class="p-3"><code>bot.py</code></td>
+                                <td class="p-3 text-rose-500">Time out (Menunggu Kepanjangan / Internet Putus)</td>
+                                <td class="p-3">Sabar dan ulangi, karena otak server Google sana memang kadang sibuk.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 7. TROUBLESHOOTING -->
+            <section id="troubleshooting" class="section-card js-section">
+                <h2 class="text-3xl mb-6 text-red-600 flex items-center gap-3">
+                    <span class="bg-red-100 p-2 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></span>
+                    7. Troubleshooting (Bengkel Dadakan)
+                </h2>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <!-- Bug 1 -->
+                    <div class="border border-red-200 bg-red-50 p-5 rounded-xl">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-red-200 text-red-800 text-xs font-bold px-2 py-1 rounded">Kasus 1</span>
+                            <h4 class="m-0 font-semibold text-slate-800">Bot cuma bengong pas di chat (Centang Dua Biru Saja)</h4>
+                        </div>
+                        <ul class="text-sm mt-2 ml-4 list-disc text-slate-700">
+                            <li><strong>Si Biang Kerok:</strong> Program Python di balik layar tiba-tiba terhenti atau tabrakan internet.</li>
+                            <li><strong>Dimana ceknya:</strong> Layar hitam command prompt komputermu.</li>
+                            <li><strong>Resep Obatnya:</strong> Jangan ubah coding. Hentikan (Pencet <code>CTRL+C</code>), dan nyalakan ulang sistemnya (<code>python bot.py</code>).</li>
+                        </ul>
+                    </div>
+
+                    <!-- Bug 2 -->
+                    <div class="border border-orange-200 bg-orange-50 p-5 rounded-xl">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-orange-200 text-orange-800 text-xs font-bold px-2 py-1 rounded">Kasus 2</span>
+                            <h4 class="m-0 font-semibold text-slate-800">KeyError: TELEGRAM_TOKEN merah di layar</h4>
+                        </div>
+                        <ul class="text-sm mt-2 ml-4 list-disc text-slate-700">
+                            <li><strong>Si Biang Kerok:</strong> Bot mau jalan menuju kantor tapi kehilangan kunci gembok Telegram.</li>
+                            <li><strong>Dimana ceknya:</strong> File yang namanya <code>.env</code>.</li>
+                            <li><strong>Resep Obatnya:</strong> Buka file tersebut pakai text editor. Tambahkan tulisan pastikan ada <code>TELEGRAM_TOKEN=kode-bot-kamu</code> tanpa salah spasi sedikitpun.</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- 8. PLAYBOOK MAINTENANCE -->
+            <section id="playbook" class="section-card js-section border-t-8 border-t-blue-500">
+                <h2 class="text-3xl mb-6 text-blue-600 flex items-center gap-3">
+                    <span class="bg-blue-100 p-2 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></span>
+                    8. Playbook Maintenance (Buku Sakti Admin)
+                </h2>
+                
+                <div class="space-y-6">
+                    <div class="flex flex-col md:flex-row gap-4 items-start">
+                        <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 shadow-lg text-lg">A</div>
+                        <div>
+                            <h4 class="text-xl font-bold mt-0 mt-1">Mengubah Karakter Sifat AI (Update Prompt)</h4>
+                            <p class="text-sm">Misal AI dirasa terlalu resmi/kaku, kamu tidak usah membongkar satupun koding python! Cukup buka folder <code>assets/inputs/</code>, cari nama subjek yang diubah (Misal PR), lalu edit ganti perintah bahasa di teks file <code>.md</code> nya dengan Notepad. Selesai!</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-4 items-start">
+                        <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 shadow-lg text-lg">B</div>
+                        <div>
+                            <h4 class="text-xl font-bold mt-0 mt-1">Mengisi/Menagih Koin Orang Lain</h4>
+                            <p class="text-sm">Kamu (sebagai Admin) dapat masuk ke bot, lalu ngetik <code class="bg-slate-100 px-1 rounded text-pink-600">/add_balance</code>. Bot akan meminta ID angkanya si Budi dan berapapun kamu isikan otomatis saldonya nambah drastis di tangan Budi.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-4 items-start">
+                        <div class="bg-slate-800 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 shadow-lg text-lg"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></div>
+                        <div>
+                            <h4 class="text-xl font-bold mt-0 mt-1">Peraturan: JANGAN PERNAH DI UBAH!</h4>
+                            <ul class="text-sm list-disc ml-5 space-y-1 text-slate-600 mt-2">
+                                <li>Jangan mengganti variabel konstan rahasia bernama <code>ConversationHandler.END</code>, kalau diganti sedikit, aplikasi akan lupa bagaimana cara mematikan sesi chat. </li>
+                                <li>Jangan mengganti ejaan <code>user_id</code> di tab Model karena pondasi database akan roboh terbentur inkonsistensi tipe data lama dan baru.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- 9. GLOSSARY -->
+            <section id="glossary" class="section-card js-section">
+                <h2 class="text-3xl mb-6 text-slate-800 flex items-center gap-3">
+                    <span class="bg-slate-200 p-2 rounded-lg"><svg class="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></span>
+                    9. Glossary (Kamus Singkat)
+                </h2>
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Card Dictionary -->
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl hover:-translate-y-1 transition duration-200">
+                        <h4 class="font-bold text-slate-900 border-b pb-2 mb-2 text-lg">AI</h4>
+                        <p class="text-sm text-slate-600 mb-0">Otak robot pintar yang gajinya dibayar per token / koin yang bertugas menilai tugas gambar dan tulisan.</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl hover:-translate-y-1 transition duration-200">
+                        <h4 class="font-bold text-slate-900 border-b pb-2 mb-2 text-lg">API (KIE)</h4>
+                        <p class="text-sm text-slate-600 mb-0">Jembatan supranatural atau pipa transparan yang membuang pertanyaan dan mendatangkan jawaban ke bot dari Google.</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl hover:-translate-y-1 transition duration-200">
+                        <h4 class="font-bold text-slate-900 border-b pb-2 mb-2 text-lg">Database</h4>
+                        <p class="text-sm text-slate-600 mb-0">Tempat penyimpanan keras seperti arsip brankas besi (tempat rahasia semua sisa koin berada).</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl hover:-translate-y-1 transition duration-200">
+                        <h4 class="font-bold text-slate-900 border-b pb-2 mb-2 text-lg">Handle / Router</h4>
+                        <p class="text-sm text-slate-600 mb-0">Polisi simpang empat di jalan bot Python. Tugasnya: bila Budi klik A, lempar Budi ke utara. Bila klik B, lempar ke Selatan.</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl hover:-translate-y-1 transition duration-200">
+                        <h4 class="font-bold text-slate-900 border-b pb-2 mb-2 text-lg">Prompt</h4>
+                        <p class="text-sm text-slate-600 mb-0">Kata-kata suci sakti yang dikirimkan ke dewa AI agar dia mau melakukan perkerjaan yang kita minta.</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl hover:-translate-y-1 transition duration-200">
+                        <h4 class="font-bold text-slate-900 border-b pb-2 mb-2 text-lg">Log</h4>
+                        <p class="text-sm text-slate-600 mb-0">CCTV atau buku dosa. Rekaman segalanya, agar sang ahli paham kenapa aplikasinya mendadak diam seribu bahasa.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="mt-20 py-8 text-center text-slate-400 text-sm border-t border-slate-200">
+                <p>Dokumentasi internal The Annotator System — Dibuat untuk pemula dalam rangka maintenance sederhana.</p>
+            </footer>
+        </div>
+    </main>
+
+    <!-- Scroll & Highlight Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('.js-section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px 0px -60% 0px',
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        // Remove active from all
+                        navLinks.forEach(link => link.classList.remove('active'));
+                        // Add active to current
+                        const currentLink = document.querySelector(`.nav-link[href="#${id}"]`);
+                        if(currentLink) currentLink.classList.add('active');
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>

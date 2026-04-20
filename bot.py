@@ -69,22 +69,26 @@ MAINTENANCE_MODE = False  # Global switch for Maintenance Mode
 # ── Pricing & Tier Constants ─────────────────────────────────────────────
 # Dynamic Pricing Ranges (Length-based, randomized per hit):
 # BASIC:   Short(<1k): 80-90,  Medium(1k-4k): 90-105,  Long(>4k): 105-120
-# PREMIUM: Short(<1k): 200-220, Medium(1k-4k): 220-240, Long(>4k): 240-250
+# PRO/PREMIUM: Short(<1k): 200-220, Medium(1k-4k): 220-240, Long(>4k): 240-250
 TIER_PRICING = {
     "BASIC": 99,    # Median estimasi untuk balance check awal
+    "PRO": 225,     # Median estimasi untuk balance check awal
     "PREMIUM": 225, # Median estimasi untuk balance check awal
 }
 TIER_MODELS = {
-    "BASIC": "gemini-3.1-pro",
+    "BASIC": "gemini-3-flash",
+    "PRO": "gemini-3.1-pro",
     "PREMIUM": "claude-sonnet-4-6",
 }
 # Label ramah pengguna untuk tampilan di chat (menyembunyikan nama model teknis)
 TIER_DISPLAY_LABELS = {
     "BASIC": "Basic",
+    "PRO": "Pro",
     "PREMIUM": "Premium",
 }
 TIER_DISPLAY_RANGES = {
     "BASIC": "85 - 120",
+    "PRO": "200 - 250",
     "PREMIUM": "200 - 250",
 }
 
@@ -108,7 +112,9 @@ TIER_DISPLAY_RANGES = {
     COLLECTING_VCG_IMAGE_B,
     COLLECTING_VCG_IMAGE_C,
     COLLECTING_VCG_IMAGE_D,
-) = range(17)
+    # Single-shot state: PSR & Writing QA (all input in one message, /next to evaluate)
+    COLLECTING_SINGLE_SHOT,
+) = range(18)
 
 DEPOSIT_ASK_NOMINAL = 100
 
@@ -426,6 +432,7 @@ async def task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             [InlineKeyboardButton("✍️ TC Proofreading", callback_data="sub_TC_PROOFREADING")],
             [InlineKeyboardButton("🖋️ Writing Tool - Proofreading V2", callback_data="sub_WRITING_TOOL_PROOFREAD_V2")],
             [InlineKeyboardButton("🧠 PSR Personalized Smart Reply", callback_data="sub_TA_PERSONALIZED_SMART_REPLY")],
+            [InlineKeyboardButton("📝 Writing QA", callback_data="sub_TA_WRITING_TOOLS_WRITING_QA")],
             [InlineKeyboardButton("🔙 Kembali", callback_data="back_task")],
         ]
         await query.edit_message_text(
@@ -659,6 +666,17 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
             "Overall Insights (English Essay)",
             "Alasan Pilihan & Justifikasi Draf (Indonesian)"
         ],
+        "TA_WRITING_TOOLS_WRITING_QA": [
+            "Part I — Categorize User Query (Type & Writing Aspect)",
+            "Part II — Accuracy & Relevance (4 pertanyaan)",
+            "Part II — Conciseness (3 pertanyaan)",
+            "Part II — Tone & Style (5 pertanyaan)",
+            "Part II — Actionability (jika Informational/Hybrid)",
+            "Part II — Educational Value (3 pertanyaan)",
+            "Part II — Localization Issues",
+            "Grading Summary per Response (Excellent/Good/Fair/Poor)",
+            "Part III — Pairwise Comparison & Observasi Keseluruhan"
+        ],
     }
 
     # Human-friendly task display names
@@ -678,6 +696,7 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
         "VCG_PROMPT_REWRITE": "VCG — Prompt Rewrite Variety Review",
         "WRITING_TOOL_PROOFREAD_V2": "Writing Tool - Proofreading V2",
         "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
+        "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
     }
 
     q_list = QUESTIONS.get(task_code, QUESTIONS["PR"])
@@ -716,7 +735,7 @@ async def confirm_task_callback(update: Update, context: ContextTypes.DEFAULT_TY
     tier_keyboard = [
         [
             InlineKeyboardButton("🧊 BASIC", callback_data="tier_BASIC"),
-            InlineKeyboardButton("💎 PREMIUM", callback_data="tier_PREMIUM"),
+            InlineKeyboardButton("💎 PRO", callback_data="tier_PRO"),
         ],
         [InlineKeyboardButton("🔙 Kembali", callback_data="back_task")]
     ]
@@ -761,6 +780,7 @@ async def tier_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         "AFM": "AFM — Safety Guide (Multi Modal)",
         "WRITING_TOOL_PROOFREAD_V2": "Writing Tool - Proofreading V2",
         "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
+        "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
     }
     main_task = context.user_data.get("SELECTED_TASK", "PR")
     sub_task = context.user_data.get("SELECTED_SUBTASK")
@@ -806,6 +826,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     context.user_data['vcg_image_b'] = None
     context.user_data['vcg_image_c'] = None
     context.user_data['vcg_image_d'] = None
+    context.user_data['temp_single_shot'] = ""
 
     # Balance check
     tg_id = update.effective_user.id
@@ -860,34 +881,131 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         context.user_data['in_evaluation'] = True
         return COLLECTING_VCG_PROMPT
 
-    # ── Flow TEXT biasa (PR, TC, CYU) ───────────────────────────────────
-    if subtask == "TA_PERSONALIZED_SMART_REPLY":
-        msg = (
-            "🚀 **Sesi Evaluasi PSR Dimulai**\n\n"
-            "⚠️ **Disclaimer**: Respons AI dirancang untuk mempermudah pengerjaan task. "
-            "Gunakan hasil ini sebagai referensi pembanding.\n\n"
-            "📥 **Langkah 1/1**: Kirim blok data lengkap berikut dalam **satu pesan**:\n\n"
-            "`Conversation: ...`\n"
-            "`User Profiles: ...`\n"
-            "`Response A1: ...`\n"
-            "`Response A2: ...`\n"
-            "`Response B1: ...`\n"
-            "`Response B2: ...`\n\n"
-            "Bot akan otomatis memproses setelah menerima format di atas."
+    # ── Single-Shot tasks (semua input dlm 1+ pesan, /next untuk proses)
+    SINGLE_SHOT_TASKS = {
+        "PR",
+        "TA_PERSONALIZED_SMART_REPLY", 
+        "TA_WRITING_TOOLS_WRITING_QA",
+        "AFM",
+        "CYU_WEBSITE_TOPIC",
+        "CYU_TOPLINE_SUMMARIZATION",
+        "TC_MESSAGE_REPLY",
+        "TC_PROOFREADING",
+        "WRITING_TOOL_PROOFREAD_V2"
+    }
+
+    final_task_code = subtask or main_task
+    if final_task_code in SINGLE_SHOT_TASKS:
+        # Tentukan format petunjuk berdasarkan task
+        disclaimer = (
+            "⚠️ *Disclaimer: Respons AI hanya sebagai referensi pembanding. Tetap gunakan critical thinking.*\n"
+            "🚀 **Mode All-in-One**: Jika total input < 4096 karakter, kirim semuanya sekaligus dalam satu pesan. "
+            "Jika lebih panjang, kirim bertahap baru ketik **/next**.\n\n"
         )
+
+        if final_task_code == "PR":
+            task_name = "PR — Preference Ranking"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One (Cepat)**\n"
+                "Jika total teks < 4096 karakter, paste semua data berikut dalam **satu pesan**:\n"
+                "`User Ask: [isi]`\n"
+                "`Response A: [isi]`\n"
+                "`Response B: [isi]`\n"
+                "`Response C: [isi — opsional]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim data satu per satu (misal: User Ask dulu, lalu Response A, dst). Setelah semua bagian terkirim, baru ketik **/next**."
+            )
+        elif final_task_code == "TA_PERSONALIZED_SMART_REPLY":
+            task_name = "PSR — Personalized Smart Reply"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One (Cepat)**\n"
+                "Paste format ini dalam **satu pesan**:\n"
+                "`Conversation: [isi]`\n"
+                "`User Profiles: [isi]`\n"
+                "`Response A1: [isi]`\n"
+                "`Response B1: [isi]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim bagian per bagian (Conversation dulu, dst), lalu ketik **/next**."
+            )
+        elif final_task_code == "TA_WRITING_TOOLS_WRITING_QA":
+            task_name = "Writing QA"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One (Cepat)**\n"
+                "Paste format ini dalam **satu pesan**:\n"
+                "`Original Text: [isi]`\n"
+                "`User Query: [isi]`\n"
+                "`Response A: [isi]`\n"
+                "`Response B: [isi]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim bagian per bagian, lalu ketik **/next**."
+            )
+        elif final_task_code == "AFM":
+            task_name = "AFM — Safety Guide Logic"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One**\n"
+                "Paste dalam **satu pesan**:\n"
+                "`User Input: [isi]`\n"
+                "`Response: [isi]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim User Input dulu, lalu Response, baru ketik **/next**."
+            )
+        elif "CYU" in final_task_code:
+            task_name = "CYU — Website Topic / Topline"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One**\n"
+                "Paste dalam **satu pesan**:\n"
+                "`User: [isi]`\n"
+                "`Response A: [isi]`\n"
+                "`Response B: [isi]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim User dulu, lalu Response A/B/C, baru ketik **/next**."
+            )
+        elif "TC" in final_task_code or "PROOFREAD" in final_task_code:
+            task_name = "TC — Message Reply / Proofreading"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One**\n"
+                "Paste dalam **satu pesan**:\n"
+                "`User Ask: [isi]`\n"
+                "`Response A: [isi]`\n"
+                "`Response B: [isi]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim per bagian, baru ketik **/next**."
+            )
+        else:
+            task_name = "Evaluasi"
+            detail = (
+                "📋 **Format Input:** Kirim data evaluasi dengan label yang jelas.\n\n"
+                "✅ Setelah semua bagian terkirim, ketik **/next** untuk memulai evaluasi."
+            )
+
+        msg = (
+            f"🚀 **Sesi {task_name} Dimulai**\n\n"
+            + disclaimer
+            + detail
+        )
+        await update.message.reply_text(msg, parse_mode="Markdown")
+        context.user_data['in_evaluation'] = True
+        return COLLECTING_SINGLE_SHOT
     else:
+        # Default flow (Fine Tuning lain jika ada) — step-by-step input
         msg = (
             "🚀 **Sesi Evaluasi Dimulai**\n\n"
-            "⚠️ **Disclaimer**:\n"
-            "Respons AI dirancang untuk mempermudah pengerjaan task, namun tidak bersifat absolut. "
-            "Gunakan hasil ini sebagai referensi pembanding. "
-            "Anda diwajibkan untuk melakukan peninjauan kritis terhadap logika evaluasi "
-            "yang diberikan guna menjaga standar kualitas anotasi yang diminta.\n\n"
-            "📢 **Info Penting**: Batas karakter Telegram adalah **4096** per pesan.\n"
-            "Jika input Anda lebih panjang, Anda bisa mengirimnya dalam beberapa pesan berturut-turut.\n\n"
-            "📥 **Langkah 1/4**: Kirim **User Ask** atau **Original Input Text**.\n"
-            "💡 *Tips: Anda bisa langsung kirim format lengkap dengan Response A/B/C dalam satu pesan jika muat.*\n\n"
-            "Setelah selesai mengirim bagian User Ask / Original Input Text, ketik **/next**."
+            "⚠️ *Disclaimer: Respons AI hanya sebagai referensi pembanding.*\n\n"
+            "Bot akan memandu kamu **langkah demi langkah**.\n\n"
+            "📥 **Langkah 1**: Kirim **User Ask** / **Input Utama**.\n"
+            "Setelah selesai, ketik **/next**."
         )
     await update.message.reply_text(msg, parse_mode="Markdown")
     context.user_data['in_evaluation'] = True
@@ -935,13 +1053,13 @@ def _calculate_dynamic_price(tier: str, content_len: int = 2000) -> int:
 
     Ranges:
     - BASIC:   Short(<1k): 80-90,  Medium(1k-4k): 90-105,  Long(>4k): 105-120
-    - PREMIUM: Short(<1k): 200-220, Medium(1k-4k): 220-240, Long(>4k): 240-250
+    - PRO/PREMIUM: Short(<1k): 200-220, Medium(1k-4k): 220-240, Long(>4k): 240-250
 
     Args:
-        tier: "BASIC" atau "PREMIUM"
+        tier: "BASIC", "PRO", atau "PREMIUM"
         content_len: Total panjang karakter semua input (default 2000 untuk VCG image).
     """
-    if tier == "PREMIUM":
+    if tier in ["PREMIUM", "PRO"]:
         if content_len < 1000:
             return random.randint(200, 220)
         elif content_len <= 4000:
@@ -1000,7 +1118,7 @@ async def _run_evaluation_background(
     )
 
     # 2. Susun user input payload
-    user_input_payload = _format_user_input(*args)
+    user_input_payload = _format_user_input(task_type, *args)
 
     # 3. Panggil API LLM — Refund Logic: TIDAK potong saldo jika gagal
     try:
@@ -1120,6 +1238,68 @@ async def collect_user_ask(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         context.user_data.get('temp_user_ask', "") + "\n" + text
     ).strip()
     return COLLECTING_USER_ASK
+
+
+# ══════════════════════════════════════════════════════════════════════════
+#  SINGLE-SHOT COLLECTOR — PSR & Writing QA (kirim bertahap, /next evaluasi)
+# ══════════════════════════════════════════════════════════════════════════
+
+async def collect_single_shot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Mengumpulkan teks dari user untuk task single-shot (PSR, Writing QA).
+    Setiap pesan di-append ke buffer temp_single_shot.
+    Jika parser berhasil deteksi format lengkap, langsung evaluasi.
+    Jika tidak, tunggu /next dari user.
+    """
+    text = update.message.text
+
+    # Append ke buffer
+    context.user_data['temp_single_shot'] = (
+        context.user_data.get('temp_single_shot', "") + "\n" + text
+    ).strip()
+
+    # Coba one-shot parse dulu — jika semua field terpenuhi, langsung evaluasi
+    parsed = _parse_evaluation_input(context.user_data['temp_single_shot'])
+    if parsed:
+        return await _do_evaluation(update, context, *parsed)
+
+    # Belum lengkap, informasikan user
+    buf_len = len(context.user_data['temp_single_shot'])
+    await update.message.reply_text(
+        f"📨 Teks diterima ({buf_len} karakter terakumulasi).\n"
+        "Lanjutkan kirim sisa data, atau ketik **/next** jika sudah selesai.",
+        parse_mode="Markdown",
+    )
+    return COLLECTING_SINGLE_SHOT
+
+
+async def next_process_single_shot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    /next untuk task single-shot: evaluasi dari buffer temp_single_shot.
+    """
+    buf = context.user_data.get('temp_single_shot', "").strip()
+    if not buf:
+        await update.message.reply_text(
+            "❌ Belum ada data yang diterima. Kirim input Anda terlebih dahulu."
+        )
+        return COLLECTING_SINGLE_SHOT
+
+    parsed = _parse_evaluation_input(buf)
+    if parsed:
+        return await _do_evaluation(update, context, *parsed)
+
+    # Parser gagal — informasikan field yang mungkin kurang
+    await update.message.reply_text(
+        "⚠️ **Format tidak dikenali.** Pastikan input menggunakan label yang benar, contoh:\n\n"
+        "Untuk PSR:\n"
+        "`Conversation:` / `User Profiles:` / `Response A1:` / `Response B1:`\n\n"
+        "Untuk Writing QA:\n"
+        "`Original Text:` / `User Query:` / `Response A:`\n\n"
+        f"📦 Data terkumpul saat ini: *{len(buf)} karakter*\n"
+        "Kirim data tambahan atau perbaiki format, lalu ketik **/next** lagi.",
+        parse_mode="Markdown",
+    )
+    return COLLECTING_SINGLE_SHOT
 
 
 async def next_to_resp_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -1980,7 +2160,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tier = user.selected_tier or "BASIC"
     tier_label = TIER_DISPLAY_LABELS.get(tier, "Basic")
     price_range = TIER_DISPLAY_RANGES.get(tier, "85 - 120")
-    premium_info = TIER_DISPLAY_RANGES.get("PREMIUM", "200 - 250")
+    pro_info = TIER_DISPLAY_RANGES.get("PRO", "200 - 250")
 
     status_text = (
         "📊 **Status Akun Anda**\n\n"
@@ -1991,7 +2171,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📂 Proyek: `{user.selected_project}`\n"
         f"🛠️ Task: `{user.selected_task}`\n"
         f"🤖 AI Tier: **{tier_label}** ({price_range} Poin/hit)\n"
-        f"💎 AI Tier: Premium **({premium_info} Poin/hit)**"
+        f"💎 AI Tier: Pro **({pro_info} Poin/hit)**"
     )
 
     await update.message.reply_text(status_text, parse_mode="Markdown")
@@ -2090,34 +2270,56 @@ def _parse_evaluation_input(text: str) -> tuple[str, str, str, str] | None:
     if conv and prof and (a1 or b1): # Minimal ada salah satu response
         return (conv, prof, a1, a2, b1, b2)
 
-    # ── DEFAULT: PR, TC, CYU ──────────────────────────────────────
+    # ── KHUSUS: TA_WRITING_TOOLS_WRITING_QA ────────────────────────
+    # Input: Original Text, Selected Text, User Query, Response A, B, C (opsional)
+    wqa_patterns = {
+        "original": r"(?i)(?:Original\s*Text\s*:?\s*)([\s\S]*?)(?=(?:(?:User\s*)?Selected\s*Text\s*:?)|(?:User\s*Query\s*:?)|$)",
+        "selected": r"(?i)(?:(?:User\s*)?Selected\s*Text\s*:?\s*)([\s\S]*?)(?=(?:User\s*Query\s*:?)|$)",
+        "query":    r"(?i)(?:User\s*Query\s*:?\s*)([\s\S]*?)(?=(?:Response\s*A\s*:?)|$)",
+        "resp_a":   r"(?i)(?:Response\s*A\s*:?\s*)([\s\S]*?)(?=(?:Response\s*B\s*:?)|$)",
+        "resp_b":   r"(?i)(?:Response\s*B\s*:?\s*)([\s\S]*?)(?=(?:Response\s*C\s*:?)|$)",
+        "resp_c":   r"(?i)(?:Response\s*C\s*:?\s*)([\s\S]*?)$",
+    }
+
+    wqa_original  = _regex_extract(text, wqa_patterns["original"])
+    wqa_selected  = _regex_extract(text, wqa_patterns["selected"])
+    wqa_query     = _regex_extract(text, wqa_patterns["query"])
+    wqa_resp_a    = _regex_extract(text, wqa_patterns["resp_a"])
+    wqa_resp_b    = _regex_extract(text, wqa_patterns["resp_b"])
+    wqa_resp_c    = _regex_extract(text, wqa_patterns["resp_c"])
+
+    # Valid jika ada original text, query, dan minimal satu response
+    if wqa_original and wqa_query and wqa_resp_a:
+        return (wqa_original, wqa_selected, wqa_query, wqa_resp_a, wqa_resp_b, wqa_resp_c)
+
+    # ── DEFAULT: PR, TC, CYU, AFM ──────────────────────────────────────
     # Coba format 1: split by separator ---
     if "---" in text:
         sections = [s.strip() for s in text.split("---")]
-        if len(sections) >= 3:
-            if re.match(r"^\s*Original\s*(?:Input\s*)?Text\s*:", sections[0], re.IGNORECASE):
-                user_ask = _strip_label(sections[0], "Original Input Text")
-                if not user_ask:
-                    user_ask = _strip_label(sections[0], "Original Text")
+        if len(sections) >= 2: # Minimal 2 section (Input + Resp)
+            # Detect label di section pertama
+            first_sec = sections[0]
+            if re.match(r"^\s*(?:User\s*Input|Original\s*Input\s*Text|Original\s*Text|User\s*Ask|User)\s*:", first_sec, re.IGNORECASE):
+                user_ask = re.sub(r"^\s*(?:User\s*Input|Original\s*Input\s*Text|Original\s*Text|User\s*Ask|User)\s*:\s*", "", first_sec, flags=re.IGNORECASE).strip()
             else:
-                user_ask = _strip_label(sections[0], "User Ask")
-            
+                user_ask = first_sec # Fallback jika tidak ada label tapi ada separator
+
             resp_a = _strip_label(sections[1], "Response A")
-            resp_b = _strip_label(sections[2], "Response B")
-            resp_c = (
-                _strip_label(sections[3], "Response C")
-                if len(sections) >= 4
-                else ""
-            )
-            if user_ask and resp_a and resp_b:
+            if not resp_a:
+                resp_a = _strip_label(sections[1], "Response")
+            
+            resp_b = _strip_label(sections[2], "Response B") if len(sections) >= 3 else ""
+            resp_c = _strip_label(sections[3], "Response C") if len(sections) >= 4 else ""
+            
+            if user_ask and resp_a:
                 return (user_ask, resp_a, resp_b, resp_c)
 
     # Coba format 2: regex-based extraction
     patterns = {
-        "user_ask": r"(?:(?:User\s*Ask|Original\s*(?:Input\s*)?Text)\s*:\s*)([\s\S]*?)(?=Response\s*A\s*:|$)",
-        "resp_a": r"(?:Response\s*A\s*:\s*)([\s\S]*?)(?=Response\s*B\s*:|$)",
-        "resp_b": r"(?:Response\s*B\s*:\s*)([\s\S]*?)(?=Response\s*C\s*:|$)",
-        "resp_c": r"(?:Response\s*C\s*:\s*)([\s\S]*?)$",
+        "user_ask": r"(?i)(?:(?:User\s*Ask|Original\s*(?:Input\s*)?Text|User\s*Input|User)\s*:\s*)([\s\S]*?)(?=Response\s*(?:A|:)|$)",
+        "resp_a": r"(?i)(?:Response\s*(?:A\s*)?:\s*)([\s\S]*?)(?=Response\s*B\s*:|$)",
+        "resp_b": r"(?i)(?:Response\s*B\s*:\s*)([\s\S]*?)(?=Response\s*C\s*:|$)",
+        "resp_c": r"(?i)(?:Response\s*C\s*:\s*)([\s\S]*?)$",
     }
 
     user_ask = _regex_extract(text, patterns["user_ask"])
@@ -2125,7 +2327,7 @@ def _parse_evaluation_input(text: str) -> tuple[str, str, str, str] | None:
     resp_b = _regex_extract(text, patterns["resp_b"])
     resp_c = _regex_extract(text, patterns["resp_c"])
 
-    if user_ask and resp_a and resp_b:
+    if user_ask and resp_a:
         return (user_ask, resp_a, resp_b, resp_c)
 
     return None
@@ -2156,23 +2358,36 @@ def _extract_database_content(text: str) -> str:
 
 
 def _format_user_input(
+    task_type: str,
     *args
 ) -> str:
     """Format user input menjadi payload yang rapi untuk dikirim ke LLM."""
     if len(args) == 6:
-        # Format PSR: conv, prof, a1, a2, b1, b2
-        conv, prof, a1, a2, b1, b2 = args
-        payload = (
-            f"1. CONVERSATION:\n{conv}\n\n"
-            f"2. USER PROFILES:\n{prof}\n\n"
-            f"3. RESPONSE A1:\n{a1 or 'N/A'}\n\n"
-            f"4. RESPONSE A2:\n{a2 or 'N/A'}\n\n"
-            f"5. RESPONSE B1:\n{b1 or 'N/A'}\n\n"
-            f"6. RESPONSE B2:\n{b2 or 'N/A'}"
-        )
-        return payload
+        # PSR vs Writing QA (keduanya punya 6 args)
+        if task_type == "TA_PERSONALIZED_SMART_REPLY":
+            conv, prof, a1, a2, b1, b2 = args
+            return (
+                f"1. CONVERSATION:\n{conv}\n\n"
+                f"2. USER PROFILES:\n{prof}\n\n"
+                f"3. RESPONSE A1:\n{a1 or 'N/A'}\n\n"
+                f"4. RESPONSE A2:\n{a2 or 'N/A'}\n\n"
+                f"5. RESPONSE B1:\n{b1 or 'N/A'}\n\n"
+                f"6. RESPONSE B2:\n{b2 or 'N/A'}"
+            )
+        else:
+            # Writing QA (Original, Selected, Query, Resp A, B, C)
+            orig, sel, query, ra, rb, rc = args
+            return (
+                f"1. ORIGINAL TEXT:\n{orig}\n\n"
+                f"2. SELECTED TEXT:\n{sel or 'N/A'}\n\n"
+                f"3. USER QUERY:\n{query}\n\n"
+                f"4. RESPONSE A:\n{ra or 'N/A'}\n\n"
+                f"5. RESPONSE B:\n{rb or 'N/A'}\n\n"
+                f"6. RESPONSE C:\n{rc or 'N/A'}"
+            )
 
     # Default logic (4 args: user_ask, resp_a, resp_b, resp_c)
+    # Berlaku juga untuk AFM (user_ask=Input, resp_a=Response)
     user_ask, resp_a, resp_b, resp_c = args[:4]
     payload = (
         f"USER ASK:\n{user_ask}\n\n"
@@ -2308,6 +2523,12 @@ def main():
                 CommandHandler("skip", process_segmented_input),
                 CommandHandler("done", force_done_command),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, collect_resp_c),
+            ],
+            # ── Single-Shot state: PSR & Writing QA ───────────────────────
+            COLLECTING_SINGLE_SHOT: [
+                CommandHandler("next", next_process_single_shot),
+                CommandHandler("done", next_process_single_shot),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, collect_single_shot),
             ],
             # ── VCG Image Flow States ──────────────────────────────────
             COLLECTING_VCG_PROMPT: [

@@ -113,6 +113,12 @@ ASSET_CONFIGS = {
         "prompts":    "prompts/ta_personalized_smart_reply_instructions.md",
         "inputs":     "inputs/ta_personalized_smart_reply_inputs.md",
     },
+    "TA_WRITING_TOOLS_WRITING_QA": {
+        "guidelines": "guidelines/ta_writing_tools_writing_QA.md",
+        "forms":      "forms/ta_writing_tools_writing_QA_forms.md",
+        "prompts":    "prompts/ta_writing_tools_writing_QA_instructions.md",
+        "inputs":     "inputs/ta_writing_tools_writing_QA_inputs.md",
+    },
 }
 
 # ── Critical Thinking System Instruction (English) ───────────────────────

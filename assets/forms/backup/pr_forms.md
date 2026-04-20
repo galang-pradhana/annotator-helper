@@ -47,6 +47,16 @@ b. 🤨 Slightly Unsatisfying
 c. 🙂 Slightly Satisfying
 d. 😍 Highly Satisfying
 
-Setelah rating tiap response, buat justifikasi draft:
+Setelah rating tiap response, lakukan komparasi:
+
+In terms of Satisfaction, how do these two responses compare?
+(A vs B)
+A Much Better / A Better / A Slightly Better / Same / B Slightly Better / B Better / B Much Better
+
+(B vs C)
+B Much Better / B Better / B Slightly Better / Same / C Slightly Better / C Better / C Much Better
+
+(A vs C)
+A Much Better / A Better / A Slightly Better / Same / C Slightly Better / C Better / C Much Better
 
 Please describe the reasons for your gradings (satu rangkuman utama dalam bahasa Indonesia DAN bahasa Inggris).

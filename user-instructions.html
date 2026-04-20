@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buku Saku Pengguna: Annotator-Helper</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Mermaid JS -->
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    </script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Nunito', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f0fdf4; color: #1f2937; line-height: 1.7; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+            padding: 40px;
+            margin-bottom: 40px;
+            border: 1px solid #dcfce7;
+        }
+        h1, h2, h3 { color: #166534; font-weight: 800; }
+        .mermaid-container { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb; overflow-x: auto; display: flex; justify-content: center; }
+        .placeholder-img {
+            background: #f3f4f6;
+            border: 2px dashed #9ca3af;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            color: #6b7280;
+            font-weight: 600;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="max-w-4xl mx-auto px-4 py-12">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-green-700 mb-4 drop-shadow-sm">Panduan Pengguna Aplikasi:<br>Annotator-Helper</h1>
+            <p class="text-xl text-green-600 max-w-2xl mx-auto font-medium">Buku panduan super gampang untuk kamu, walau baru pertama kali pegang aplikasi ini.</p>
+        </header>
+
+        <!-- 1. SELAMAT DATANG -->
+        <section id="selamat-datang" class="card border-t-8 border-t-green-500">
+            <h2 class="text-3xl mb-4 flex items-center gap-3">
+                <span class="text-4xl">👋</span> 1. Selamat Datang & Apa Itu Aplikasi Ini?
+            </h2>
+            <p><strong>Annotator-Helper</strong> adalah asisten pintar di Telegram yang siap membantumu kapan saja. Ia ibarat guru atau editor pribadi: kamu cukup kirimkan teks yang berantakan atau gambar yang mau dinilai, lalu bot ini akan mengoreksinya dalam hitungan detik. Bot ini bekerja dengan memotong sejumlah "Koin Saldo" setiap kali kamu minta tolong padanya. Didesain sangat mudah, kamu ngobrol dengan alat ini layaknya chat biasa dengan teman di Telegram!</p>
+            
+            <div class="mt-6 bg-green-50 p-5 rounded-xl border border-green-200">
+                <h3 class="text-lg mt-0 mb-2 text-green-800">Siapa yang cocok pakai aplikasi ini?</h3>
+                <ul class="list-disc ml-5 text-green-900 markers:text-green-600 space-y-1">
+                    <li>Ibu-ibu atau bapak-bapak yang butuh asisten untuk merapikan tulisan laporan kerja.</li>
+                    <li>Siswa atau mahasiswa yang butuh mengecek tugas karangan.</li>
+                    <li>Siapapun yang ingin mengecek gambar menggunakan mata kecerdasan buatan, <strong>tanpa perlu tahu coding atau bahasa komputer!</strong></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 2. PANDUAN CEPAT -->
+        <section class="card border-t-8 border-t-teal-500">
+            <h2 class="text-3xl mb-6 flex items-center gap-3">
+                <span class="text-4xl">⏱️</span> 2. Panduan Cepat 1 Menit
+            </h2>
+            <p class="mb-4">Baru banget mulai? Lakukan 3 langkah kilat ini:</p>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="text-center p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:-translate-y-1 transition">
+                    <div class="bg-teal-100 w-12 h-12 rounded-full flex items-center justify-center text-teal-700 font-bold text-xl mx-auto mb-4">1</div>
+                    <h4 class="font-bold text-slate-800 text-lg mb-2">Buka Chat Telegram</h4>
+                    <p class="text-sm text-slate-600">Buka aplikasi Telegram kamu, cari akun bot Annotator ini, lalu ketik kata sakti: <strong>/start</strong></p>
+                </div>
+                <div class="text-center p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:-translate-y-1 transition">
+                    <div class="bg-teal-100 w-12 h-12 rounded-full flex items-center justify-center text-teal-700 font-bold text-xl mx-auto mb-4">2</div>
+                    <h4 class="font-bold text-slate-800 text-lg mb-2">Terima Menu Utama</h4>
+                    <p class="text-sm text-slate-600">Bot akan membalas dan memberikan kamu Koin Gratis. Klik tombol <strong>Mulai</strong> di layar.</p>
+                </div>
+                <div class="text-center p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:-translate-y-1 transition">
+                    <div class="bg-teal-100 w-12 h-12 rounded-full flex items-center justify-center text-teal-700 font-bold text-xl mx-auto mb-4">3</div>
+                    <h4 class="font-bold text-slate-800 text-lg mb-2">Ikuti Panduan Bot</h4>
+                    <p class="text-sm text-slate-600">Pilih menu tulisan atau menu gambar. Bot akan memandu memintamu mengunggah teks/gambar. Selesai!</p>
+                </div>
+            </div>
+            
+            <div class="placeholder-img">
+                <span class="text-3xl">📸</span>
+                ![Screenshot - Layar Chatbot Telegram Menu Utama](screenshot-placeholder.jpg)
+                <span class="text-xs font-normal">Kira-kira layarnya akan seperti ini saat pertama kali buka</span>
+            </div>
+        </section>
+
+        <!-- 3. CARA MENGGUNAKAN APLIKASI -->
+        <section class="card border-t-8 border-t-amber-500">
+            <h2 class="text-3xl mb-6 flex items-center gap-3">
+                <span class="text-4xl">📱</span> 3. Cara Menggunakan Aplikasi
+            </h2>
+            <p>Aplikasi ini berbentuk mirip seperti petugas Customer Service di Telegram. Kamu gak perlu menekan banyak tombol rumit. Kamu cukup mencet pilihan yang diberikan padamu di layar obrolan.</p>
+            
+            <div class="mermaid-container my-6">
+                <div class="mermaid">
+                flowchart TD
+                    A([Kamu ketik /mulai]) --> B[Pilih Bahasa & Proyek]
+                    B --> C{Bot Tanya Mau Pekerjaan Apa?}
+                    C -- "Merapikan Teks" --> D[Kamu Kirim Ketikan]
+                    C -- "Menilai Gambar" --> E[Kamu Kirim Foto]
+                    D --> F([Bot Berpikir...])
+                    E --> F
+                    F --> G([Trik! Bot memunculkan Jawaban & Koin dipotong])
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. FITUR LENGKAP -->
+        <section class="card border-t-8 border-t-sky-500">
+            <h2 class="text-3xl mb-6 flex items-center gap-3">
+                <span class="text-4xl">🎯</span> 4. Fitur Lengkap dengan Contoh
+            </h2>
+
+            <!-- Fitur 1 -->
+            <div class="bg-sky-50 rounded-2xl p-6 mb-8 border border-sky-100">
+                <h3 class="text-2xl text-sky-800 mb-2 mt-0">📝 Fitur Proofreading (Merapikan Teks)</h3>
+                <p><strong>Apa fungsinya?</strong> Berapa kali kita ngetik naskah laporan yang bahasanya berantakan dan pusing koma-titiknya? Bot ini bisa secara ajaib membeberkan kalimat panjang mu jadi kalimat profesional dan formal.</p>
+                
+                <p class="font-bold text-slate-700 mt-4 mb-2">Cara Pakainya:</p>
+                <ol class="list-decimal ml-5 text-slate-700 space-y-1 mb-4">
+                    <li>Ketik <code>/mulai</code> di chat Telegram.</li>
+                    <li>Muncul menu tombol di layar. Klik kategori <strong>Proofreading</strong>.</li>
+                    <li>Bot akan tanya, "Apa instruksinya?". Ketik saja keinginanmu santai (Misal: <em>Bikinkan formal</em>).</li>
+                    <li>Bot akan tanya, "Kirimkan teks yang mau dibenerin". Copas deh tulisan laporan acak adutmu.</li>
+                    <li>Tunggu sekitar 5-10 detik.</li>
+                </ol>
+
+                <div class="bg-white p-4 rounded-xl border border-sky-200">
+                    <strong class="text-sky-700">💬 Contoh chat yang dikirim:</strong>
+                    <div class="grid md:grid-cols-2 gap-4 mt-2">
+                        <div class="bg-blue-100 text-blue-900 p-3 rounded-lg rounded-tr-none ml-auto w-11/12 text-sm shadow-sm">
+                            <em>Instruksi:</em> Tolong ubah bahasanya supaya sopan banget buat dikirim ke bos manajerku.
+                        </div>
+                        <div class="bg-blue-100 text-blue-900 p-3 rounded-lg rounded-tr-none ml-auto w-11/12 text-sm shadow-sm">
+                            <em>Tulisan Asli:</em> pak aku besok ga masuk ya soale sakit panas dr kemaren mhn ijin.
+                        </div>
+                    </div>
+                </div>
+
+                <p class="mt-4 text-slate-700"><strong>Apa yang akan terjadi setelahnya?</strong><br>Bot akan membalas begini: <em>"Yth Bapak Manajer, dengan hormat saya memohon izin untuk tidak masuk kerja pada esok hari dikarenakan saya sedang mengalami demam..."</em></p>
+                
+                <div class="placeholder-img">
+                    <span class="text-3xl">📸</span>
+                    ![Screenshot - Cara edit Teks](screenshot-placeholder.jpg)
+                </div>
+            </div>
+
+            <!-- Fitur 2 -->
+            <div class="bg-indigo-50 rounded-2xl p-6 mb-8 border border-indigo-100">
+                <h3 class="text-2xl text-indigo-800 mb-2 mt-0">🖼️ Fitur VCG Edit (Juri Gambar)</h3>
+                <p><strong>Apa fungsinya?</strong> Berfungsi mengecek dan membandingkan 4 buah gambar (misalnya foto screenshot desain yang beda-beda sedikit), lalu Bot akan berperan seperti kritikus senin yang memilih foto mana yang paling tanpa cacat.</p>
+                
+                <p class="font-bold text-slate-700 mt-4 mb-2">Cara Pakainya:</p>
+                <ol class="list-decimal ml-5 text-slate-700 space-y-1 mb-4">
+                    <li>Ketik <code>/mulai</code> dan masuk opsi menu gambar (VCG_EDIT).</li>
+                    <li>Bot akan minta kamu, "Tolong upload Gambar A"</li>
+                    <li>Kamu kirim gambar pertama dari HP atau komputermu (Pastikan dikirim sebagai Foto biasa).</li>
+                    <li>Bot akan mengangguk dan minta, "Oke, sekarang upload Gambar B, tekan Selesai kalau sudah cukup fotonya".</li>
+                    <li>Kamu ulangi upload gambar ke-2, ke-3, dst.</li>
+                    <li>Kalau sudah di-upload semuanya, bot akan langsung mikir mengamati gambarnya pelan-pelan.</li>
+                </ol>
+
+                <div class="bg-white p-4 rounded-xl border border-indigo-200">
+                    <strong class="text-indigo-700">💬 Contoh pesan:</strong>
+                    <p class="text-sm text-slate-600 mt-1 mb-0">(Kamu hanya perlu klik icon Kertas/Klip 📎 di Telegram, pilih potret galerimu, lalu tekan tombol panah Kirim, tanpa teks apapun).</p>
+                </div>
+
+                <p class="mt-4 text-slate-700"><strong>Apa yang akan terjadi setelahnya?</strong><br>Bot akan kasih komentar panjang tentang foto mana yang kualitasnya terbaik dan mana yang ada salah ketiknya di dalam foto itu.</p>
+
+                <div class="placeholder-img">
+                    <span class="text-3xl">📸</span>
+                    ![Screenshot - Cara kirim foto VCG](screenshot-placeholder.jpg)
+                </div>
+            </div>
+            
+        </section>
+
+        <!-- 5. TIPS & TRIK -->
+        <section class="card border-t-8 border-t-rose-500">
+            <h2 class="text-3xl mb-6 flex items-center gap-3">
+                <span class="text-4xl">💡</span> 5. Tips & Trik Biar Makin Mudah
+            </h2>
+            <div class="space-y-4">
+                <div class="flex items-start gap-4">
+                    <div class="bg-rose-100 text-rose-700 p-3 rounded-full shrink-0">🏃‍♂️</div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 m-0">Cara mempercepat proses</h4>
+                        <p class="text-sm text-slate-600 m-0 mt-1">Jangan kepencet ngirim stiker! Bot tidak mengerti gambar lucu dari Telegram, bot akan bingung. Kalau mengirim teks panjang, cukup ketik di Notes Hp-mu dulu lalu Paste/Jiplak sekaligus.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="bg-rose-100 text-rose-700 p-3 rounded-full shrink-0">📜</div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 m-0">Cara melihat riwayat kerja asistenmu</h4>
+                        <p class="text-sm text-slate-600 m-0 mt-1">Kamu lupa pekerjaan apa yang baru saja bot benarin sejam lalu? Gampang! Cukup ketik perintah rahasia: <strong>/history</strong> — Bot akan langsung memperlihatkan jejak file dan teks lama punyamu.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="bg-rose-100 text-rose-700 p-3 rounded-full shrink-0">🛑</div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 m-0">Cara membatalkan saat macet di tengah jalan</h4>
+                        <p class="text-sm text-slate-600 m-0 mt-1">Loh, salah milih menu? Daripada pusing, kamu ketik saja <strong>/cancel</strong>. Bot akan minta maaf dan siap kembali ke posisi awal bersiap menunggu perintah barumu.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. FAQ (Pertanyaan Umum) -->
+        <section class="card border-t-8 border-t-fuchsia-500">
+            <h2 class="text-3xl mb-6 flex items-center gap-3">
+                <span class="text-4xl">🗣️</span> 6. Pertanyaan yang Sering Ditanyakan (FAQ)
+            </h2>
+            <div class="space-y-4 divide-y divide-slate-100">
+                
+                <div class="pt-4 first:pt-0">
+                    <p class="text-fuchsia-800 font-bold flex items-center gap-2"><span class="bg-fuchsia-100 text-xs px-2 py-1 rounded text-fuchsia-900">T:</span> Kenapa ya bot saya tiba-tiba bilang saldonya habis?</p>
+                    <p class="text-slate-600 text-sm mt-1 ml-8 m-0"><span class="font-bold text-emerald-600">J:</span> Karena aplikasi ini pakai koin pintar! Setiap minta tolong bot bayarnya pakai saldo. Kalau habis, kamu harus ketik <strong>/topup</strong> atau minta tolong ke mas-mas Admin buat ngisi koin kamu.</p>
+                </div>
+
+                <div class="pt-4">
+                    <p class="text-fuchsia-800 font-bold flex items-center gap-2"><span class="bg-fuchsia-100 text-xs px-2 py-1 rounded text-fuchsia-900">T:</span> Apakah bot ini aman? Tulisan saya akan dibaca orang lain gak?</p>
+                    <p class="text-slate-600 text-sm mt-1 ml-8 m-0"><span class="font-bold text-emerald-600">J:</span> Paling rahasia. Semua percakapan cuma bot dan kamu yang tahu. Admin memang bisa ngecek sistem kinerjanya, tapi tenang saja ini dijamin tidak dipaling lirik orang luar.</p>
+                </div>
+
+                <div class="pt-4">
+                    <p class="text-fuchsia-800 font-bold flex items-center gap-2"><span class="bg-fuchsia-100 text-xs px-2 py-1 rounded text-fuchsia-900">T:</span> Gimana cara balikan bahasa dari Inggris ke bahasa Indonesia?</p>
+                    <p class="text-slate-600 text-sm mt-1 ml-8 m-0"><span class="font-bold text-emerald-600">J:</span> Klik perintah <strong>/mulai</strong>, lalu di deretan menu awal, ada pilihan ganti tombol 'Bahasa / Languange'. Pilih 'ID' untuk bahasa Indonesia.</p>
+                </div>
+
+                <div class="pt-4">
+                    <p class="text-fuchsia-800 font-bold flex items-center gap-2"><span class="bg-fuchsia-100 text-xs px-2 py-1 rounded text-fuchsia-900">T:</span> Kenapa botnya mbulet, lama banget bales pesannya?</p>
+                    <p class="text-slate-600 text-sm mt-1 ml-8 m-0"><span class="font-bold text-emerald-600">J:</span> Kalau perintahmu cukup panjang (seperti memikirkan bacaan berhalaman-halaman), botnya perlu waktu baca. Tungguin bentar, biasanya 5-15 detik beres!</p>
+                </div>
+
+                <div class="pt-4">
+                    <p class="text-fuchsia-800 font-bold flex items-center gap-2"><span class="bg-fuchsia-100 text-xs px-2 py-1 rounded text-fuchsia-900">T:</span> Kalau aku tutup Telegram pas bot lagi ngitung/mikir, kerjaannya hilang kah?</p>
+                    <p class="text-slate-600 text-sm mt-1 ml-8 m-0"><span class="font-bold text-emerald-600">J:</span> Aman kok! Walaupun kamu tutup aplikasinya atau buka TikTok, bot tetap mengingat dan nanti pas kamu cek ruang obrolan Telegramnya lagi, jawabannya sudah nangkring manis di sana.</p>
+                </div>
+                
+                <div class="pt-4">
+                    <p class="text-fuchsia-800 font-bold flex items-center gap-2"><span class="bg-fuchsia-100 text-xs px-2 py-1 rounded text-fuchsia-900">T:</span> Aku ngirim gambar resolusi HD tinggi kok bot bilang error?</p>
+                    <p class="text-slate-600 text-sm mt-1 ml-8 m-0"><span class="font-bold text-emerald-600">J:</span> Wah gambar 4K terlalu berat buat ditelan mesin kami. Pastikan ngirim sebagai 'Foto' Telegram (otomatis kekompres) ya, JANGAN kirim sebagai document file mentah!</p>
+                </div>
+
+                <div class="pt-4">
+                    <p class="text-fuchsia-800 font-bold flex items-center gap-2"><span class="bg-fuchsia-100 text-xs px-2 py-1 rounded text-fuchsia-900">T:</span> Ada tombol 'Ganti Tier', itu fungsinya buat apa sih?</p>
+                    <p class="text-slate-600 text-sm mt-1 ml-8 m-0"><span class="font-bold text-emerald-600">J:</span> Sama aja kayak milih pesawat pakai kursi ekonomi atau kursi mewah VIP. Mesinnya lebih jenius tapi koin yang terpotong sekali chat jauh lebih mahal!</p>
+                </div>
+                
+                <div class="pt-4">
+                    <p class="text-fuchsia-800 font-bold flex items-center gap-2"><span class="bg-fuchsia-100 text-xs px-2 py-1 rounded text-fuchsia-900">T:</span> Bisakah Aplikasi ini bikin tulisan skripsi dari nol?</p>
+                    <p class="text-slate-600 text-sm mt-1 ml-8 m-0"><span class="font-bold text-emerald-600">J:</span> Jangan dong, dia ini lebih ke 'Reviewer / Korektor'. Kamu tetap harus kirim draf kasarnya terlebih dahulu, barulah dia memolesnya jadi berkilau dehh.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. TROUBLESHOOTING -->
+        <section class="card border-t-8 border-t-purple-500">
+            <h2 class="text-3xl mb-6 flex items-center gap-3">
+                <span class="text-4xl">🛠️</span> 7. Troubleshooting (P3K Buat Pemula)
+            </h2>
+            <p class="mb-4">Jangan panik kalau nemu hal ganjil. Gini cara ngobatinya.</p>
+            
+            <div class="grid sm:grid-cols-2 gap-4">
+                <!-- Case 1 -->
+                <div class="bg-purple-50 p-5 rounded-2xl border border-purple-100">
+                    <h4 class="font-bold text-purple-900 flex gap-2 items-start mt-0 mb-2">
+                        <span>🚨</span> Kalau muncul masalah: Bot centang biru doang, tidak ngetik balasan.
+                    </h4>
+                    <p class="text-sm text-slate-700 m-0"><strong>🔥 Lakukan Ini:</strong> Berarti server utama sedang terlelap tidur siang. Tenang, kamu cuma perlu ketik <strong>/cancel</strong> aja lalu mulai lagi 10 menit ke depan.</p>
+                </div>
+
+                <!-- Case 2 -->
+                <div class="bg-purple-50 p-5 rounded-2xl border border-purple-100">
+                    <h4 class="font-bold text-purple-900 flex gap-2 items-start mt-0 mb-2">
+                        <span>🚨</span> Kalau muncul masalah: Tombol ga bisa dipencet, macet!
+                    </h4>
+                    <p class="text-sm text-slate-700 m-0"><strong>🔥 Lakukan Ini:</strong> Itu karena kamu maksa pencet tombol dari chat hari kamis kemaren. Pesan lama tombolnya expired. Silakan ketik perintah awal <strong>/start</strong> untuk munculkan menu layar yang baru dan *fresh*.</p>
+                </div>
+
+                <!-- Case 3 -->
+                <div class="bg-purple-50 p-5 rounded-2xl border border-purple-100">
+                    <h4 class="font-bold text-purple-900 flex gap-2 items-start mt-0 mb-2">
+                        <span>🚨</span> Kalau muncul masalah: Gambar ku gak mau diterima si bot.
+                    </h4>
+                    <p class="text-sm text-slate-700 m-0"><strong>🔥 Lakukan Ini:</strong> Pastikan kamu tidak sedang berada di menu fitur "Memoles Teks". Bot nggak mau makan gambar jika disuruh nelen teks. Ulangi chat dari awal lalu pilihlah menu khusus Gambar (VCG_EDIT).</p>
+                </div>
+
+                <!-- Case 4 -->
+                <div class="bg-purple-50 p-5 rounded-2xl border border-purple-100">
+                    <h4 class="font-bold text-purple-900 flex gap-2 items-start mt-0 mb-2">
+                        <span>🚨</span> Kalau muncul masalah: Dia bales "Terjadi kesalahan internal, mohon coba lagi"
+                    </h4>
+                    <p class="text-sm text-slate-700 m-0"><strong>🔥 Lakukan Ini:</strong> Ini tandanya teks yang kamu tempelin di chat kelewat panjang banget kayak kereta api, coba potong jadi dua babak deh laporannya biar bot nggak pusing mencerna kepanjangan.</p>
+                </div>
+            </div>
+            
+        </section>
+
+        <footer class="text-center py-6 text-slate-400 text-sm font-medium">
+            &copy; Annotator Helper - Panduan Resmi Khusus Pengguna.<br>
+            Tarik nafas panjang, santai, serahkan tulisanmu ke si bot! ✨
+        </footer>
+    </div>
+
+</body>
+</html>
