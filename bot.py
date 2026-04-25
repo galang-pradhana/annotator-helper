@@ -1212,12 +1212,16 @@ async def _run_evaluation_background(
 
     if len(full_text) > 4000:
         await update.message.reply_text(disclaimer, parse_mode="Markdown")
-        chunks = _split_message(llm_response, 4000)
+        chunks = _split_message(llm_response, 3000)
         for chunk in chunks:
             try:
                 await update.message.reply_text(chunk, parse_mode="Markdown")
-            except Exception:
-                await update.message.reply_text(chunk)
+            except Exception as e:
+                logger.warning(f"Markdown send failed for chunk: {e}")
+                try:
+                    await update.message.reply_text(chunk)
+                except Exception as e2:
+                    logger.error(f"Plaintext send failed for chunk: {e2}")
             await asyncio.sleep(0.5)
         await update.message.reply_text(footer, parse_mode="Markdown", reply_markup=reply_markup)
     else:
@@ -2418,22 +2422,27 @@ def _format_user_input(
     return payload
 
 
-def _split_message(text: str, max_len: int = 4000) -> list[str]:
+def _split_message(text: str, max_len: int = 3000) -> list[str]:
     """Split pesan panjang menjadi chunks yang aman untuk Telegram."""
     if len(text) <= max_len:
-        return [text]
+        return [text] if text.strip() else []
 
     chunks = []
     while text:
         if len(text) <= max_len:
-            chunks.append(text)
+            if text.strip():
+                chunks.append(text)
             break
 
         split_point = text.rfind("\n", 0, max_len)
-        if split_point == -1:
+        # Jika tidak ada newline, atau newline tepat di awal (menghasilkan chunk kosong)
+        if split_point <= 0:
             split_point = max_len
 
-        chunks.append(text[:split_point])
+        chunk = text[:split_point]
+        if chunk.strip():
+            chunks.append(chunk)
+            
         text = text[split_point:].lstrip("\n")
 
     return chunks
