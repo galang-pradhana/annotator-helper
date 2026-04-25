@@ -883,10 +883,14 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     # ── Single-Shot tasks (semua input dlm 1+ pesan, /next untuk proses)
     SINGLE_SHOT_TASKS = {
-        "PR",
         "TA_PERSONALIZED_SMART_REPLY", 
         "TA_WRITING_TOOLS_WRITING_QA",
-        "AFM",
+        "AFM"
+    }
+
+    # ── Multi-Step tasks (All-in-One didukung, atau step-by-step via /next)
+    MULTI_STEP_TASKS = {
+        "PR",
         "CYU_WEBSITE_TOPIC",
         "CYU_TOPLINE_SUMMARIZATION",
         "TC_MESSAGE_REPLY",
@@ -895,7 +899,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     }
 
     final_task_code = subtask or main_task
-    if final_task_code in SINGLE_SHOT_TASKS:
+    if final_task_code in SINGLE_SHOT_TASKS or final_task_code in MULTI_STEP_TASKS:
         # Tentukan format petunjuk berdasarkan task
         disclaimer = (
             "⚠️ *Disclaimer: Respons AI hanya sebagai referensi pembanding. Tetap gunakan critical thinking.*\n"
@@ -915,7 +919,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "`Response C: [isi — opsional]`\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
-                "Kirim data satu per satu (misal: User Ask dulu, lalu Response A, dst). Setelah semua bagian terkirim, baru ketik **/next**."
+                "Kirim **User Ask** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
             )
         elif final_task_code == "TA_PERSONALIZED_SMART_REPLY":
             task_name = "PSR — Personalized Smart Reply"
@@ -968,7 +972,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "`Response B: [isi]`\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
-                "Kirim User dulu, lalu Response A/B/C, baru ketik **/next**."
+                "Kirim **User** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
             )
         elif "TC" in final_task_code or "PROOFREAD" in final_task_code:
             task_name = "TC — Message Reply / Proofreading"
@@ -981,7 +985,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "`Response B: [isi]`\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
-                "Kirim per bagian, baru ketik **/next**."
+                "Kirim **User Ask** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
             )
         else:
             task_name = "Evaluasi"
@@ -997,7 +1001,11 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         )
         await update.message.reply_text(msg, parse_mode="Markdown")
         context.user_data['in_evaluation'] = True
-        return COLLECTING_SINGLE_SHOT
+
+        if final_task_code in SINGLE_SHOT_TASKS:
+            return COLLECTING_SINGLE_SHOT
+        else:
+            return COLLECTING_USER_ASK
     else:
         # Default flow (Fine Tuning lain jika ada) — step-by-step input
         msg = (
