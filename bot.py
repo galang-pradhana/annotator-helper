@@ -1212,9 +1212,13 @@ async def _run_evaluation_background(
 
     if len(full_text) > 4000:
         await update.message.reply_text(disclaimer, parse_mode="Markdown")
-        for i in range(0, len(llm_response), 4000):
-            chunk = llm_response[i:i+4000]
-            await update.message.reply_text(chunk)
+        chunks = _split_message(llm_response, 4000)
+        for chunk in chunks:
+            try:
+                await update.message.reply_text(chunk, parse_mode="Markdown")
+            except Exception:
+                await update.message.reply_text(chunk)
+            await asyncio.sleep(0.5)
         await update.message.reply_text(footer, parse_mode="Markdown", reply_markup=reply_markup)
     else:
         await update.message.reply_text(full_text, parse_mode="Markdown", reply_markup=reply_markup)
@@ -1806,9 +1810,13 @@ async def _run_vcg_evaluation_background(
 
     if len(full_text) > 4000:
         await update.message.reply_text(disclaimer, parse_mode="Markdown")
-        for i in range(0, len(llm_response), 4000):
-            chunk = llm_response[i:i+4000]
-            await update.message.reply_text(chunk)
+        chunks = _split_message(llm_response, 4000)
+        for chunk in chunks:
+            try:
+                await update.message.reply_text(chunk, parse_mode="Markdown")
+            except Exception:
+                await update.message.reply_text(chunk)
+            await asyncio.sleep(0.5)
         await update.message.reply_text(footer, parse_mode="Markdown", reply_markup=reply_markup)
     else:
         await update.message.reply_text(full_text, parse_mode="Markdown", reply_markup=reply_markup)
