@@ -44,7 +44,6 @@ Thumbs.db
 
 # Scratch and non-essentials
 scratch/
-test_*.py
 check_tasks.py
 fix_db.py
 sample_prompt_output.md
