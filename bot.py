@@ -18,6 +18,8 @@ import random
 import asyncio
 import time
 import base64
+import html
+import io
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -211,6 +213,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     """Handler Command /start — Registrasi/Sapa user + minta pilih bahasa."""
     tg_id = update.effective_user.id
     username = update.effective_user.username or update.effective_user.first_name or "User"
+    
+    # Reset session on /start
+    context.user_data.clear()
 
     async with get_session() as session:
         user, is_new = await user_service.register_or_get_user(session, tg_id, username)
@@ -1181,25 +1186,22 @@ async def _run_evaluation_background(
     # 5. Kirim hasil akhir ke user
     await status_msg.delete()
     
-    disclaimer = (
-        "⚠️ **PENGINGAT**: *Tugas AI hanya membantu. Harap telaah kembali hasil evaluasi ini "
-        "dengan cermat (Critical Thinking required).*\n"
-        "──────────────────\n\n"
+    disclaimer_html = (
+        "⚠️ <b>PENGINGAT</b>: <i>Tugas AI hanya membantu. Harap telaah kembali hasil evaluasi ini "
+        "dengan cermat (Critical Thinking required).</i>\n"
+        "──────────────────\n"
     )
     
     tier_label = TIER_DISPLAY_LABELS.get(tier, tier)
-    footer = (
-        f"\n\n──────────────────\n"
-        f"✅ **Evaluasi Selesai!**\n"
-        f"🤖 AI Tier: **{tier_label}**\n"
-        f"💰 Biaya: **{price} Poin**\n"
-        f"💳 Sisa Saldo: **{remaining:,} Poin**\n"
+    footer_html = (
         f"──────────────────\n"
-        f"💡 Ketik **/mulai** untuk lanjut, atau **/cancel** untuk ganti task/proyek.\n"
+        f"✅ <b>Evaluasi Selesai!</b>\n"
+        f"🤖 AI Tier: <b>{tier_label}</b>\n"
+        f"💰 Biaya: <b>{price} Poin</b>\n"
+        f"💳 Sisa Saldo: <b>{remaining:,} Poin</b>\n"
+        f"──────────────────\n"
+        f"💡 Ketik <b>/mulai</b> untuk lanjut, atau <b>/cancel</b> untuk ganti task/proyek.\n"
     )
-    
-    # Handle Telegram character limit (4096)
-    full_text = disclaimer + llm_response + footer
     
     # Tombol Feedback
     reply_markup = None
@@ -1210,22 +1212,13 @@ async def _run_evaluation_background(
         ]]
         reply_markup = InlineKeyboardMarkup(kb)
 
-    if len(full_text) > 4000:
-        await update.message.reply_text(disclaimer, parse_mode="Markdown")
-        chunks = _split_message(llm_response, 3000)
-        for chunk in chunks:
-            try:
-                await update.message.reply_text(chunk, parse_mode="Markdown")
-            except Exception as e:
-                logger.warning(f"Markdown send failed for chunk: {e}")
-                try:
-                    await update.message.reply_text(chunk)
-                except Exception as e2:
-                    logger.error(f"Plaintext send failed for chunk: {e2}")
-            await asyncio.sleep(0.5)
-        await update.message.reply_text(footer, parse_mode="Markdown", reply_markup=reply_markup)
-    else:
-        await update.message.reply_text(full_text, parse_mode="Markdown", reply_markup=reply_markup)
+    await send_large_message(
+        update, 
+        llm_response, 
+        disclaimer=disclaimer_html, 
+        footer=footer_html, 
+        reply_markup=reply_markup
+    )
 
     # ── TASK 4: Low Balance Notification ──────────────────────────
     if remaining < 100:
@@ -1784,25 +1777,22 @@ async def _run_vcg_evaluation_background(
 
     await status_msg.delete()
 
-    disclaimer = (
-        "⚠️ **PENGINGAT**: *Tugas AI hanya membantu. Harap telaah kembali hasil evaluasi ini "
-        "dengan cermat (Critical Thinking required).*\n"
-        "──────────────────\n\n"
+    disclaimer_html = (
+        "⚠️ <b>PENGINGAT</b>: <i>Tugas AI hanya membantu. Harap telaah kembali hasil evaluasi ini "
+        "dengan cermat (Critical Thinking required).</i>\n"
+        "──────────────────\n"
     )
     tier_label = TIER_DISPLAY_LABELS.get(tier, tier)
-    footer = (
-        f"\n\n──────────────────\n"
-        f"✅ **Evaluasi VCG Selesai!**\n"
-        f"🤖 AI Tier: **{tier_label}**\n"
-        f"💰 Biaya: **{price} Poin**\n"
-        f"💳 Sisa Saldo: **{remaining:,} Poin**\n"
+    footer_html = (
         f"──────────────────\n"
-        f"💡 Ketik **/mulai** untuk lanjut, atau **/cancel** untuk ganti task."
+        f"✅ <b>Evaluasi VCG Selesai!</b>\n"
+        f"🤖 AI Tier: <b>{tier_label}</b>\n"
+        f"💰 Biaya: <b>{price} Poin</b>\n"
+        f"💳 Sisa Saldo: <b>{remaining:,} Poin</b>\n"
+        f"──────────────────\n"
+        f"💡 Ketik <b>/mulai</b> untuk lanjut, atau <b>/cancel</b> untuk ganti task."
     )
 
-    # Handle Telegram character limit (4096)
-    full_text = disclaimer + llm_response + footer
-    
     # Tombol Feedback
     reply_markup = None
     if eval_id:
@@ -1812,18 +1802,13 @@ async def _run_vcg_evaluation_background(
         ]]
         reply_markup = InlineKeyboardMarkup(kb)
 
-    if len(full_text) > 4000:
-        await update.message.reply_text(disclaimer, parse_mode="Markdown")
-        chunks = _split_message(llm_response, 4000)
-        for chunk in chunks:
-            try:
-                await update.message.reply_text(chunk, parse_mode="Markdown")
-            except Exception:
-                await update.message.reply_text(chunk)
-            await asyncio.sleep(0.5)
-        await update.message.reply_text(footer, parse_mode="Markdown", reply_markup=reply_markup)
-    else:
-        await update.message.reply_text(full_text, parse_mode="Markdown", reply_markup=reply_markup)
+    await send_large_message(
+        update, 
+        llm_response, 
+        disclaimer=disclaimer_html, 
+        footer=footer_html, 
+        reply_markup=reply_markup
+    )
 
     # ── TASK 4: Low Balance Notification ──────────────────────────
     if remaining < 100:
@@ -1881,17 +1866,22 @@ async def view_history_callback(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     date_str = eval_obj.timestamp.strftime("%Y-%m-%d %H:%M")
-    # Batasi output panjang agar tidak error di Telegram
-    safe_input = eval_obj.user_input[:500] + "..." if len(eval_obj.user_input) > 500 else eval_obj.user_input
     
-    content = (
-        f"📅 **Waktu**: {date_str}\n"
-        f"📋 **Task**: {eval_obj.task_code}\n\n"
-        f"❓ **Pertanyaan (User Input)**:\n`{safe_input}`\n\n"
-        f"🤖 **Jawaban AI**:\n{eval_obj.ai_output[:3500]}"
+    header_html = (
+        f"📅 <b>Waktu</b>: {date_str}\n"
+        f"📋 <b>Task</b>: {eval_obj.task_code}\n"
+        f"──────────────────\n"
+        f"❓ <b>User Input</b>:\n"
+        f"<code>{html.escape(eval_obj.user_input[:1000])}</code>\n"
+        f"──────────────────\n"
+        f"🤖 <b>Jawaban AI</b>:\n"
     )
     
-    await update.effective_chat.send_message(content, parse_mode="Markdown")
+    await send_large_message(
+        update, 
+        eval_obj.ai_output, 
+        disclaimer=header_html
+    )
 
 
 async def feedback_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2422,6 +2412,11 @@ def _format_user_input(
     return payload
 
 
+def is_balance_sufficient(current_balance: int, price: int) -> bool:
+    """Cek apakah saldo mencukupi untuk harga tertentu."""
+    return current_balance >= price
+
+
 def _split_message(text: str, max_len: int = 3000) -> list[str]:
     """Split pesan panjang menjadi chunks yang aman untuk Telegram."""
     if len(text) <= max_len:
@@ -2446,6 +2441,96 @@ def _split_message(text: str, max_len: int = 3000) -> list[str]:
         text = text[split_point:].lstrip("\n")
 
     return chunks
+
+
+async def send_large_message(
+    update: Update,
+    text: str,
+    disclaimer: str = "",
+    footer: str = "",
+    reply_markup: InlineKeyboardMarkup = None,
+) -> None:
+    """
+    Mengirim pesan panjang ke user dengan cara:
+    1. Konversi ke HTML untuk kestabilan parsing.
+    2. Potong menjadi chunks jika > 4000 karakter.
+    3. Jika lebih dari 2 chunks, kirim juga file .txt sebagai backup lengkap.
+    4. Handle rate-limiting dan markdown errors secara otomatis.
+    """
+    # 1. Persiapan konten (Escape HTML untuk keamanan, kecuali tag dasar yang kita inginkan)
+    # Karena LLM sering menghasilkan karakter < > yang merusak HTML, kita escape dulu.
+    # Tapi kita ingin mengizinkan <b>, <i>, <code>, <a>, <pre>.
+    
+    def safe_html(t: str) -> str:
+        """
+        Mengonversi markdown sederhana ke HTML Telegram secara aman.
+        1. Escape HTML entities.
+        2. Ubah **bold** -> <b>bold</b>.
+        3. Ubah `code` -> <code>code</code>.
+        4. Ubah list bullet (* ) -> (• ).
+        """
+        import re
+        # Escape entities
+        t = html.escape(t)
+        # Bold
+        t = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', t)
+        # Monospace
+        t = re.sub(r'`(.*?)`', r'<code>\1</code>', t)
+        # Bullet points
+        t = re.sub(r'(?m)^\* ', r'• ', t)
+        return t
+
+    # 2. Cek panjang total (tanpa pembungkus <code> agar lebih enak dibaca)
+    content_html = safe_html(text)
+    
+    full_html = ""
+    if disclaimer:
+        full_html += disclaimer + "\n"
+    full_html += content_html
+    if footer:
+        full_html += "\n" + footer
+
+    if len(full_html) <= 4000:
+        try:
+            await update.message.reply_text(full_html, parse_mode="HTML", reply_markup=reply_markup)
+            return
+        except Exception as e:
+            logger.warning(f"HTML send failed: {e}. Falling back to plaintext.")
+            await update.message.reply_text(text[:4000], reply_markup=reply_markup)
+            return
+
+    # 3. Jika terlalu panjang, pecah menjadi chunks
+    if disclaimer:
+        await update.message.reply_text(disclaimer, parse_mode="HTML")
+
+    chunks = _split_message(text, 3500)
+    for i, chunk in enumerate(chunks):
+        chunk_html = safe_html(chunk)
+        try:
+            prefix = f"<b>[Bagian {i+1}/{len(chunks)}]</b>\n" if len(chunks) > 1 else ""
+            await update.message.reply_text(prefix + chunk_html, parse_mode="HTML")
+        except Exception:
+            await update.message.reply_text(chunk)
+        
+        await asyncio.sleep(0.8)
+
+    # Kirim footer di akhir
+    if footer:
+        await update.message.reply_text(footer, parse_mode="HTML", reply_markup=reply_markup)
+
+    # 4. FILE FALLBACK: Jika > 1 chunk, kirim file lengkap agar user punya backup
+    if len(chunks) > 1:
+        try:
+            file_content = f"{disclaimer}\n\n{text}\n\n{footer}"
+            bio = io.BytesIO(file_content.encode('utf-8'))
+            bio.name = "hasil_evaluasi_lengkap.txt"
+            await update.message.reply_document(
+                document=bio,
+                caption="📄 **File Backup**: Hasil evaluasi lengkap (Gunakan jika pesan di atas terpotong).",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send file fallback: {e}")
 
 
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
