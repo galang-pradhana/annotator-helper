@@ -2464,23 +2464,27 @@ async def send_large_message(
     def safe_html(t: str) -> str:
         """
         Mengonversi markdown sederhana ke HTML Telegram secara aman.
-        1. Escape HTML entities.
-        2. Ubah **bold** -> <b>bold</b>.
-        3. Ubah `code` -> <code>code</code>.
-        4. Ubah list bullet (* ) -> (• ).
         """
         import re
-        # Escape entities
+        if not t:
+            return ""
+        # 1. Escape entities
         t = html.escape(t)
-        # Bold
-        t = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', t)
-        # Monospace
+        # 2. Bold (mendukung multiline)
+        t = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', t, flags=re.DOTALL)
+        # 3. Monospace
         t = re.sub(r'`(.*?)`', r'<code>\1</code>', t)
-        # Bullet points
+        # 4. Bullet points
         t = re.sub(r'(?m)^\* ', r'• ', t)
         return t
 
-    # 2. Cek panjang total (tanpa pembungkus <code> agar lebih enak dibaca)
+    # Gunakan effective_message agar lebih aman di berbagai konteks (callback/message)
+    msg_handle = update.effective_message if update.effective_message else update.message
+    if not msg_handle:
+        logger.error("Tidak dapat menemukan message handle untuk mengirim respons.")
+        return
+
+    # 2. Cek panjang total
     content_html = safe_html(text)
     
     full_html = ""
@@ -2492,31 +2496,43 @@ async def send_large_message(
 
     if len(full_html) <= 4000:
         try:
-            await update.message.reply_text(full_html, parse_mode="HTML", reply_markup=reply_markup)
+            await msg_handle.reply_text(full_html, parse_mode="HTML", reply_markup=reply_markup)
             return
         except Exception as e:
             logger.warning(f"HTML send failed: {e}. Falling back to plaintext.")
-            await update.message.reply_text(text[:4000], reply_markup=reply_markup)
+            fallback_text = f"{text}\n\n{footer}" if footer else text
+            await msg_handle.reply_text(fallback_text[:4000], reply_markup=reply_markup)
             return
 
-    # 3. Jika terlalu panjang, pecah menjadi chunks
+    # 3. Jika terlalu panjang (> 4000), pecah menjadi chunks
+    # Kirim disclaimer dulu
     if disclaimer:
-        await update.message.reply_text(disclaimer, parse_mode="HTML")
+        try:
+            await msg_handle.reply_text(disclaimer, parse_mode="HTML")
+        except Exception:
+            await msg_handle.reply_text("⚠️ **Hasil Evaluasi:**")
 
     chunks = _split_message(text, 3500)
+    if not chunks and text:
+        chunks = [text] # Fallback jika splitter gagal
+        
     for i, chunk in enumerate(chunks):
         chunk_html = safe_html(chunk)
         try:
             prefix = f"<b>[Bagian {i+1}/{len(chunks)}]</b>\n" if len(chunks) > 1 else ""
-            await update.message.reply_text(prefix + chunk_html, parse_mode="HTML")
-        except Exception:
-            await update.message.reply_text(chunk)
+            await msg_handle.reply_text(prefix + chunk_html, parse_mode="HTML")
+        except Exception as e:
+            logger.warning(f"Chunk {i} HTML failed: {e}")
+            await msg_handle.reply_text(chunk)
         
         await asyncio.sleep(0.8)
 
     # Kirim footer di akhir
     if footer:
-        await update.message.reply_text(footer, parse_mode="HTML", reply_markup=reply_markup)
+        try:
+            await msg_handle.reply_text(footer, parse_mode="HTML", reply_markup=reply_markup)
+        except Exception:
+            await msg_handle.reply_text("✅ Selesai.", reply_markup=reply_markup)
 
     # 4. FILE FALLBACK: Jika > 1 chunk, kirim file lengkap agar user punya backup
     if len(chunks) > 1:
