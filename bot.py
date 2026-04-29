@@ -2496,21 +2496,24 @@ async def send_large_message(
 
     if len(full_html) <= 4000:
         try:
-            await msg_handle.reply_text(full_html, parse_mode="HTML", reply_markup=reply_markup)
+            await msg_handle.reply_text(full_html, parse_mode="HTML", reply_markup=reply_markup, read_timeout=30, write_timeout=30)
             return
         except Exception as e:
             logger.warning(f"HTML send failed: {e}. Falling back to plaintext.")
             fallback_text = f"{text}\n\n{footer}" if footer else text
-            await msg_handle.reply_text(fallback_text[:4000], reply_markup=reply_markup)
+            try:
+                await msg_handle.reply_text(fallback_text[:4000], reply_markup=reply_markup, read_timeout=30, write_timeout=30)
+            except Exception as inner_e:
+                logger.error(f"Fallback send also failed: {inner_e}")
             return
 
     # 3. Jika terlalu panjang (> 4000), pecah menjadi chunks
     # Kirim disclaimer dulu
     if disclaimer:
         try:
-            await msg_handle.reply_text(disclaimer, parse_mode="HTML")
+            await msg_handle.reply_text(disclaimer, parse_mode="HTML", read_timeout=30, write_timeout=30)
         except Exception:
-            await msg_handle.reply_text("⚠️ **Hasil Evaluasi:**")
+            await msg_handle.reply_text("⚠️ **Hasil Evaluasi:**", read_timeout=30, write_timeout=30)
 
     chunks = _split_message(text, 3500)
     if not chunks and text:
@@ -2520,19 +2523,23 @@ async def send_large_message(
         chunk_html = safe_html(chunk)
         try:
             prefix = f"<b>[Bagian {i+1}/{len(chunks)}]</b>\n" if len(chunks) > 1 else ""
-            await msg_handle.reply_text(prefix + chunk_html, parse_mode="HTML")
+            await msg_handle.reply_text(prefix + chunk_html, parse_mode="HTML", read_timeout=30, write_timeout=30)
         except Exception as e:
             logger.warning(f"Chunk {i} HTML failed: {e}")
-            await msg_handle.reply_text(chunk)
+            try:
+                await msg_handle.reply_text(chunk, read_timeout=30, write_timeout=30)
+            except Exception as inner_e:
+                logger.error(f"Fallback chunk {i} failed: {inner_e}")
         
-        await asyncio.sleep(0.8)
+        await asyncio.sleep(1.0) # Sedikit diperlama agar tidak kena rate limit
 
     # Kirim footer di akhir
     if footer:
         try:
-            await msg_handle.reply_text(footer, parse_mode="HTML", reply_markup=reply_markup)
+            await msg_handle.reply_text(footer, parse_mode="HTML", reply_markup=reply_markup, read_timeout=30, write_timeout=30)
         except Exception:
-            await msg_handle.reply_text("✅ Selesai.", reply_markup=reply_markup)
+            await msg_handle.reply_text("✅ Selesai.", reply_markup=reply_markup, read_timeout=30, write_timeout=30)
+
 
     # 4. FILE FALLBACK: Jika > 1 chunk, kirim file lengkap agar user punya backup
     if len(chunks) > 1:
