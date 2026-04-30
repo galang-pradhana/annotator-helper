@@ -41,7 +41,7 @@ def _is_maintenance_error(msg: str) -> bool:
     return any(kw in msg_lower for kw in maintenance_keywords)
 
 
-async def call_kie_ai_api(
+async def _call_kie_ai_internal(
     system_prompt: str,
     user_input: str,
     model_override: str = None,
@@ -146,27 +146,14 @@ async def call_kie_ai_api(
 
                     # Server error (5xx) → cek apakah maintenance
                     if _is_maintenance_error(raw):
-                        if attempt < MAX_RETRIES:
-                            wait = RETRY_DELAY * attempt
-                            logger.warning(f"Server maintenance detected. Retry in {wait}s...")
-                            await asyncio.sleep(wait)
-                            continue
-                        return (
-                            "❌ **Server Maintenance**\n"
-                            "Kie.ai sedang dalam pemeliharaan. Coba lagi beberapa menit.\n"
-                            "(Saldo tidak dipotong)"
-                        )
+                        return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
                     else:
                         if attempt < MAX_RETRIES:
                             wait = RETRY_DELAY * attempt
                             logger.warning(f"Server error {response.status_code}. Retry in {wait}s...")
                             await asyncio.sleep(wait)
                             continue
-                        return (
-                            f"❌ **Server Error {response.status_code}**\n"
-                            f"```\n{raw}\n```\n"
-                            "(Saldo tidak dipotong — API sedang bermasalah)"
-                        )
+                        return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
 
                 # ── Parse JSON response ──────────────────────────────────────
                 data = response.json()
@@ -180,16 +167,7 @@ async def call_kie_ai_api(
                         last_error_msg = f"code {api_code}: {api_msg}"
 
                         if _is_maintenance_error(api_msg):
-                            if attempt < MAX_RETRIES:
-                                wait = RETRY_DELAY * attempt
-                                logger.warning(f"Maintenance via wrapped error. Retry in {wait}s...")
-                                await asyncio.sleep(wait)
-                                continue
-                            return (
-                                "❌ **Server Maintenance**\n"
-                                "Kie.ai sedang dalam pemeliharaan. Coba lagi beberapa menit.\n"
-                                "(Saldo tidak dipotong)"
-                            )
+                            return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
                         else:
                             # Server exception — retry 1x lalu bail
                             if attempt < MAX_RETRIES:
@@ -197,11 +175,7 @@ async def call_kie_ai_api(
                                 logger.warning(f"Server exception. Retry in {wait}s...")
                                 await asyncio.sleep(wait)
                                 continue
-                            return (
-                                f"❌ **API Error {api_code}**\n"
-                                f"> {api_msg}\n\n"
-                                "(Saldo tidak dipotong — silakan coba lagi nanti)"
-                            )
+                            return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
 
                 # ── Extract LLM reply ────────────────────────────────────────
                 llm_reply = ""
@@ -251,11 +225,7 @@ async def call_kie_ai_api(
             if attempt < MAX_RETRIES:
                 await asyncio.sleep(RETRY_DELAY * attempt)
                 continue
-            return (
-                "❌ **Timeout** — API Kie.ai tidak merespons.\n"
-                f"Batas waktu: {timeout} detik. Coba lagi nanti.\n"
-                "(Saldo tidak dipotong)"
-            )
+            return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
 
         except httpx.HTTPStatusError as e:
             logger.error(f"[{attempt}] HTTP Status Error: {e.response.status_code}")
@@ -272,15 +242,11 @@ async def call_kie_ai_api(
                 continue
             return f"❌ **Error** — {type(e).__name__}: {e}"
 
-    # Semua retry habis
-    return (
-        f"❌ **Gagal setelah {MAX_RETRIES} percobaan**\n"
-        f"> {last_error_msg}\n\n"
-        "(Saldo tidak dipotong — coba lagi nanti)"
-    )
+    # Semua retry habis - Fallback to OpenRouter
+    return f"❌ **Kie.ai Error**: Semua percobaan gagal. {last_error_msg}. Silakan gunakan /switch openrouter."
 
 
-async def call_kie_ai_api_multimodal(
+async def _call_kie_ai_internal_multimodal(
     system_prompt: str,
     user_text: str,
     images_b64: dict,
@@ -393,14 +359,14 @@ async def call_kie_ai_api_multimodal(
                             f"❌ **Client Error {response.status_code}**\n"
                             f"```\n{raw}\n```"
                         )
+                    if _is_maintenance_error(raw):
+                        return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
+
                     if attempt < MAX_RETRIES:
                         await asyncio.sleep(RETRY_DELAY * attempt)
                         continue
-                    return (
-                        f"❌ **Server Error {response.status_code}**\n"
-                        f"```\n{raw}\n```\n"
-                        "(Saldo tidak dipotong)"
-                    )
+                    
+                    return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
 
                 data = response.json()
 
@@ -410,14 +376,14 @@ async def call_kie_ai_api_multimodal(
                         api_msg = data.get("msg") or data.get("message") or "Unknown"
                         logger.error(f"[VCG-{attempt}] Wrapped error {api_code}: {api_msg}")
                         last_error_msg = f"code {api_code}: {api_msg}"
+                        if _is_maintenance_error(api_msg):
+                            return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
+
                         if attempt < MAX_RETRIES:
                             await asyncio.sleep(RETRY_DELAY * attempt)
                             continue
-                        return (
-                            f"❌ **API Error {api_code}**\n"
-                            f"> {api_msg}\n\n"
-                            "(Saldo tidak dipotong — silakan coba lagi)"
-                        )
+                            
+                        return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
 
                 llm_reply = ""
                 if is_claude:
@@ -453,11 +419,7 @@ async def call_kie_ai_api_multimodal(
             if attempt < MAX_RETRIES:
                 await asyncio.sleep(RETRY_DELAY * attempt)
                 continue
-            return (
-                "❌ **Timeout** — API tidak merespons.\n"
-                "Gambar mungkin terlalu besar. Coba lagi nanti.\n"
-                "(Saldo tidak dipotong)"
-            )
+            return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
 
         except Exception as e:
             logger.error(f"[VCG-{attempt}] Unexpected: {type(e).__name__}: {e}")
@@ -467,8 +429,211 @@ async def call_kie_ai_api_multimodal(
                 continue
             return f"❌ **Error** — {type(e).__name__}: {e}"
 
-    return (
-        f"❌ **Gagal setelah {MAX_RETRIES} percobaan**\n"
-        f"> {last_error_msg}\n\n"
-        "(Saldo tidak dipotong — coba lagi nanti)"
-    )
+    # Semua retry habis - Fallback to OpenRouter
+    logger.warning(f"VCG All retries exhausted for Kie.ai. Fallback to OpenRouter... Last error: {last_error_msg}")
+    return await call_openrouter_api_multimodal(system_prompt, user_text, images_b64, model_name)
+
+
+# ── OpenRouter Fallback ───────────────────────────────────────────────────────
+
+def _map_to_openrouter_model(kie_model_name: str) -> str:
+    """Memetakan nama model Kie.ai ke model OpenRouter sesuai preferensi user."""
+    model = (kie_model_name or "").lower()
+    
+    # BASIC tier diarahkan ke Gemini 2.5 Flash Lite
+    # Sangat hemat tapi penalaran jauh di atas Llama 3 8B gratisan.
+    if "flash" in model:
+        return "google/gemini-2.5-flash-lite"
+        
+    # PRO/PREMIUM tier diarahkan ke DeepSeek V3
+    # Harga luar biasa murah (~$0.14/1M input) tapi logika setara GPT-4o. Tidak akan meleset untuk anotasi.
+    return "deepseek/deepseek-chat"
+
+async def call_openrouter_api(system_prompt: str, user_input: str, model_name: str) -> str:
+    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        return "❌ **OpenRouter API Key tidak ditemukan di .env**"
+        
+    or_model = _map_to_openrouter_model(model_name)
+    
+    if "claude" in (model_name or "").lower():
+        return "❌ **Model Claude sementara dinonaktifkan di fallback OpenRouter.**"
+
+    endpoint = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "https://kie.ai", # Fallback referer
+        "X-OpenRouter-Title": "Annotator Pro",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": or_model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_input}
+        ]
+    }
+    
+    logger.info(f"🔄 FALLBACK TO OPENROUTER | MODEL: {or_model} | PROMPT: {len(system_prompt)} chars")
+    
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            response = await client.post(endpoint, json=payload, headers=headers)
+            if response.status_code != 200:
+                return f"❌ **OpenRouter Error {response.status_code}**\n```\n{response.text[:500]}\n```"
+                
+            data = response.json()
+            choices = data.get("choices", [])
+            if choices:
+                reply = choices[0].get("message", {}).get("content", "")
+                logger.info(f"✅ [OpenRouter] Response OK | {len(reply)} chars")
+                return reply
+            return f"⚠️ Format OpenRouter API tidak dikenali:\n```json\n{str(data)[:500]}\n```"
+    except Exception as e:
+        return f"❌ **OpenRouter Exception** — {type(e).__name__}: {e}"
+
+
+async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, images_b64: dict, model_name: str) -> str:
+    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        return "❌ **OpenRouter API Key tidak ditemukan di .env**"
+        
+    or_model = _map_to_openrouter_model(model_name)
+    
+    if "claude" in (model_name or "").lower():
+        return "❌ **Model Claude sementara dinonaktifkan di fallback OpenRouter.**"
+
+    endpoint = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "https://kie.ai",
+        "X-OpenRouter-Title": "Annotator Pro",
+        "Content-Type": "application/json"
+    }
+    
+    content_parts = []
+    for label, b64_data in images_b64.items():
+        content_parts.append({"type": "text", "text": f"**Gambar {label}:**"})
+        content_parts.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{b64_data}"}
+        })
+    content_parts.append({"type": "text", "text": user_text})
+    
+    payload = {
+        "model": or_model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": content_parts}
+        ]
+    }
+    
+    logger.info(f"🔄 VCG FALLBACK TO OPENROUTER | MODEL: {or_model} | IMAGES: {list(images_b64.keys())}")
+    
+    try:
+        async with httpx.AsyncClient(timeout=180) as client:
+            response = await client.post(endpoint, json=payload, headers=headers)
+            if response.status_code != 200:
+                return f"❌ **OpenRouter Error {response.status_code}**\n```\n{response.text[:500]}\n```"
+                
+            data = response.json()
+            choices = data.get("choices", [])
+            if choices:
+                reply = choices[0].get("message", {}).get("content", "")
+                logger.info(f"✅ [VCG/OpenRouter] Response OK | {len(reply)} chars")
+                return reply
+            return f"⚠️ Format OpenRouter API tidak dikenali:\n```json\n{str(data)[:500]}\n```"
+    except Exception as e:
+        return f"❌ **OpenRouter Exception** — {type(e).__name__}: {e}"
+
+# ── Router & Status ────────────────────────────────────────────────────────────
+
+async def call_ai_engine(system_prompt: str, user_input: str, model_override: str = None) -> str:
+    engine = os.environ.get("ACTIVE_ENGINE", "openrouter").lower()
+    if engine == "openrouter":
+        return await call_openrouter_api(system_prompt, user_input, model_override)
+    else:
+        return await _call_kie_ai_internal(system_prompt, user_input, model_override)
+
+async def call_ai_engine_multimodal(system_prompt: str, user_text: str, images_b64: dict, model_override: str = None) -> str:
+    engine = os.environ.get("ACTIVE_ENGINE", "openrouter").lower()
+    if engine == "openrouter":
+        return await call_openrouter_api_multimodal(system_prompt, user_text, images_b64, model_override)
+    else:
+        return await _call_kie_ai_internal_multimodal(system_prompt, user_text, images_b64, model_override)
+
+async def check_engine_status() -> str:
+    """Memeriksa status dari Kie.ai dan OpenRouter dengan melakukan request ringan."""
+    status_report = "🔍 **Laporan Status Engine**\n\n"
+    
+    # Check Kie.ai
+    status_report += "🟢 **Kie.ai:**\n"
+    try:
+        api_url = os.environ.get("KIE_API_URL", "https://api.kie.ai")
+        # Kita coba hit endpoint models untuk cek koneksi
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{api_url.rstrip('/')}/v1/models")
+            if resp.status_code == 200 or resp.status_code == 404 or resp.status_code == 401:
+                # Setidaknya server merespons
+                status_report += f"  • Server Reachable (HTTP {resp.status_code})\n"
+            else:
+                status_report += f"  • ⚠️ Error: HTTP {resp.status_code}\n"
+    except Exception as e:
+         status_report += f"  • ❌ Down: {type(e).__name__}\n"
+
+    # Check OpenRouter
+    status_report += "\n🔵 **OpenRouter:**\n"
+    try:
+        or_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+        if not or_key:
+            status_report += "  • ⚠️ API Key tidak ditemukan\n"
+        else:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    "https://openrouter.ai/api/v1/auth/key", 
+                    headers={"Authorization": f"Bearer {or_key}"}
+                )
+                if resp.status_code == 200:
+                    status_report += "  • ✅ API Key Valid\n"
+                elif resp.status_code == 401:
+                    status_report += "  • ❌ API Key Invalid (401)\n"
+                else:
+                    status_report += f"  • ⚠️ Error: HTTP {resp.status_code}\n"
+    except Exception as e:
+        status_report += f"  • ❌ Down: {type(e).__name__}\n"
+        
+    active = os.environ.get("ACTIVE_ENGINE", "openrouter").upper()
+    status_report += f"\n📍 **Active Engine:** `{active}`"
+    return status_report
+
+
+async def test_ai_engine(tier: str = "BASIC") -> str:
+    """Melakukan tes pengerjaan nyata ke engine yang aktif."""
+    engine = os.environ.get("ACTIVE_ENGINE", "openrouter").lower()
+    # Petakan tier ke model name yang biasa dipakai di bot
+    model_name = "gemini-3-flash" if tier.upper() == "BASIC" else "gemini-3.1-pro"
+    
+    test_prompt = "Hi, this is a system health check. Please reply with 'READY' if you can hear me."
+    
+    logger.info(f"🧪 TESTING ENGINE: {engine.upper()} | TIER: {tier} | MODEL: {model_name}")
+    
+    try:
+        if engine == "openrouter":
+            resp = await call_openrouter_api("You are a helpful assistant.", test_prompt, model_name)
+        else:
+            resp = await _call_kie_ai_internal("You are a helpful assistant.", test_prompt, model_name)
+        
+        if resp.startswith(("❌", "⚠️")):
+            return f"❌ **Test Gagal!**\n\n{resp}"
+        
+        return (
+            f"✅ **Test Berhasil!**\n\n"
+            f"📍 Engine: `{engine.upper()}`\n"
+            f"💎 Tier: `{tier.upper()}`\n"
+            f"🤖 AI Reply: `{resp.strip()}`\n\n"
+            f"Sistem siap digunakan untuk tugas nyata."
+        )
+    except Exception as e:
+        return f"❌ **Test Exception** — `{type(e).__name__}: {e}`"
+

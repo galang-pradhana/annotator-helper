@@ -45,7 +45,8 @@ processed_updates = deque(maxlen=1000)
 from database import init_db, get_session
 import user_service
 from prompt_assembler import assemble_evaluator_prompt, LANGUAGE_MAP
-from kie_api import call_kie_ai_api
+from kie_api import call_ai_engine, call_ai_engine_multimodal, check_engine_status, test_ai_engine
+from dotenv import set_key as dotenv_set_key
 
 # ── Logging ───────────────────────────────────────────────────────────────
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -1135,7 +1136,7 @@ async def _run_evaluation_background(
 
     # 3. Panggil API LLM — Refund Logic: TIDAK potong saldo jika gagal
     try:
-        llm_response = await call_kie_ai_api(
+        llm_response = await call_ai_engine(
             evaluator_prompt, user_input_payload, model_override=model
         )
     except Exception as e:
@@ -1735,7 +1736,7 @@ async def _run_vcg_evaluation_background(
 
     # Panggil API multimodal
     try:
-        llm_response = await call_kie_ai_api_multimodal(
+        llm_response = await call_ai_engine_multimodal(
             system_prompt=evaluator_prompt,
             user_text=user_input_text,
             images_b64=images_b64,
@@ -2032,6 +2033,82 @@ async def toggle_maintenance_command(update: Update, context: ContextTypes.DEFAU
         await update.message.reply_text("❌ Argumen tidak dikenal. Gunakan `on` atau `off`.")
 
 
+async def switch_engine_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin: /switch <kie|openrouter> — Ganti engine AI yang aktif secara global."""
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    args = context.args
+    if not args:
+        current = os.environ.get("ACTIVE_ENGINE", "openrouter").upper()
+        await update.message.reply_text(
+            f"🔀 **Engine Switcher**\n\n"
+            f"📍 Engine aktif saat ini: `{current}`\n\n"
+            f"Gunakan:\n"
+            f"`/switch kie` — Pindah ke Kie.ai\n"
+            f"`/switch openrouter` — Pindah ke OpenRouter",
+            parse_mode="Markdown"
+        )
+        return
+
+    target = args[0].lower()
+    if target not in ("kie", "openrouter"):
+        await update.message.reply_text("❌ Pilihan tidak valid. Gunakan `kie` atau `openrouter`.")
+        return
+
+    os.environ["ACTIVE_ENGINE"] = target
+    try:
+        env_path = os.path.join(os.path.dirname(__file__), ".env")
+        dotenv_set_key(env_path, "ACTIVE_ENGINE", target)
+    except Exception as e:
+        logger.warning(f"Gagal menyimpan ACTIVE_ENGINE ke .env: {e}")
+
+    emoji = "🤖" if target == "kie" else "🔵"
+    name = "Kie.ai" if target == "kie" else "OpenRouter"
+    await update.message.reply_text(
+        f"{emoji} **Engine berhasil diganti!**\n\n"
+        f"📍 Engine aktif sekarang: `{name.upper()}`\n"
+        f"Semua request AI dari seluruh user akan menggunakan **{name}** mulai sekarang.",
+        parse_mode="Markdown"
+    )
+    logger.info(f"🔀 ADMIN switched engine to: {target.upper()}")
+
+
+async def check_engine_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin: /check engine — Cek status kesehatan semua engine AI."""
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    args = context.args
+    if args and args[0].lower() == "engine" or not args:
+        status_msg = await update.message.reply_text("⏳ Memeriksa status semua engine...")
+        report = await check_engine_status()
+        await status_msg.edit_text(report, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(
+            "📖 Gunakan: `/check engine`",
+            parse_mode="Markdown"
+        )
+
+
+async def test_engine_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin: /test <basic|pro> — Melakukan tes pengerjaan nyata ke engine aktif."""
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    args = context.args
+    tier = "BASIC"
+    if args:
+        tier = args[0].upper()
+        if tier not in ("BASIC", "PRO"):
+            await update.message.reply_text("❌ Tier tidak valid. Gunakan `basic` atau `pro`.")
+            return
+
+    status_msg = await update.message.reply_text(f"🧪 Sedang mengetes engine aktif dengan tier `{tier}`...")
+    report = await test_ai_engine(tier)
+    await status_msg.edit_text(report, parse_mode="Markdown")
+
+
 async def add_balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin: /add_balance <user_id> <amount> — Top-up saldo user."""
     tg_id = update.effective_user.id
@@ -2220,7 +2297,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "▫️ **/stats** — Pantau statistik global bot.\n"
             "▫️ **/broadcast** `<pesan>` — Pengumuman massal.\n"
             "▫️ **/check_fail** — Laporan rekam riwayat failure/negative.\n"
-            "▫️ **/maintenance** `<on/off>` — Toggle mode perbaikan."
+            "▫️ **/maintenance** `<on/off>` — Toggle mode perbaikan.\n"
+            "▫️ **/switch** `<kie|openrouter>` — Ganti engine AI aktif.\n"
+            "▫️ **/check engine** — Cek kesehatan server AI.\n"
+            "▫️ **/test** `<basic|pro>` — Tes pengerjaan nyata ke AI aktif."
         )
 
     await update.message.reply_text(help_text, parse_mode="Markdown")
@@ -2714,6 +2794,9 @@ def main():
     app.add_handler(CommandHandler("check_fail", check_fail_command), group=1)
     app.add_handler(CommandHandler("user", user_inspector_command), group=1)
     app.add_handler(CommandHandler("maintenance", toggle_maintenance_command), group=1)
+    app.add_handler(CommandHandler("switch", switch_engine_command), group=1)
+    app.add_handler(CommandHandler("check", check_engine_command), group=1)
+    app.add_handler(CommandHandler("test", test_engine_command), group=1)
 
     # 2. Standalone & User Commands
     app.add_handler(CommandHandler("status", status_command), group=1)
