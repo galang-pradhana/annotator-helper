@@ -445,9 +445,9 @@ def _map_to_openrouter_model(kie_model_name: str) -> str:
     if "flash" in model:
         return "google/gemini-2.5-flash-lite"
         
-    # PRO/PREMIUM tier diarahkan ke DeepSeek V3
-    # Harga luar biasa murah (~$0.14/1M input) tapi logika setara GPT-4o. Tidak akan meleset untuk anotasi.
-    return "deepseek/deepseek-chat"
+    # PRO/PREMIUM tier diarahkan ke Grok Fast
+    # Sesuai permintaan, fallback openrouter menggunakan Grok Fast agar lebih baik
+    return "x-ai/grok-fast"
 
 async def call_openrouter_api(system_prompt: str, user_input: str, model_name: str) -> str:
     api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()

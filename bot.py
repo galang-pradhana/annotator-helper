@@ -1136,7 +1136,7 @@ async def _run_evaluation_background(
     final_task_code = task_type
 
     try:
-        evaluator_prompt = assemble_evaluator_prompt(lang_code, final_task_code, tier)
+        evaluator_prompt = assemble_evaluator_prompt(lang_code, final_task_code)
     except FileNotFoundError as e:
         await status_msg.edit_text(f"❌ Error: {e}")
         return
@@ -1724,7 +1724,7 @@ async def _run_vcg_evaluation_background(
 
     # Rakit evaluator prompt
     try:
-        evaluator_prompt = assemble_evaluator_prompt(lang_code, task_type, tier)
+        evaluator_prompt = assemble_evaluator_prompt(lang_code, task_type)
     except FileNotFoundError as e:
         await status_msg.edit_text(f"❌ Error: {e}")
         return
