@@ -37,6 +37,7 @@ ASSET_CONFIGS = {
         "guidelines": "guidelines/pr_preference_ranking.md",
         "forms":      "forms/pr_forms.md",
         "prompts":    "prompts/pr_prompt_instructions.md",
+        "prompts_pro": "prompts/pr_prompt_instructions_pro.md",
         "inputs":     "inputs/pr_inputs.md",
     },
     "AFM": {
@@ -163,9 +164,9 @@ def read_asset_file(filepath: str) -> str:
     return content
 
 
-def assemble_master_prompt(lang_code: str, task_code: str = "PR") -> str:
+def assemble_master_prompt(lang_code: str, task_code: str = "PR", tier: str = "BASIC") -> str:
     """
-    Merakit MASTER_SYSTEM_PROMPT dasar dari semua asset file berdasarkan task_code.
+    Merakit MASTER_SYSTEM_PROMPT dasar dari semua asset file berdasarkan task_code dan tier.
     """
     lang_name, iso_code = LANGUAGE_MAP.get(
         lang_code.upper(), ("Bahasa Inggris", "en")
@@ -175,7 +176,13 @@ def assemble_master_prompt(lang_code: str, task_code: str = "PR") -> str:
     
     guidelines_content = read_asset_file(os.path.join(ASSETS_DIR, config["guidelines"]))
     forms_content      = read_asset_file(os.path.join(ASSETS_DIR, config["forms"]))
-    prompts_content    = read_asset_file(os.path.join(ASSETS_DIR, config["prompts"]))
+    
+    if tier.upper() in ["PRO", "PREMIUM"] and "prompts_pro" in config:
+        prompts_path = config["prompts_pro"]
+    else:
+        prompts_path = config["prompts"]
+        
+    prompts_content    = read_asset_file(os.path.join(ASSETS_DIR, prompts_path))
     inputs_content     = read_asset_file(os.path.join(ASSETS_DIR, config["inputs"]))
 
     master_prompt = f"""\
@@ -221,7 +228,7 @@ END OF MASTER SYSTEM PROMPT
     return master_prompt
 
 
-def assemble_evaluator_prompt(lang_code: str, task_code: str = "PR") -> str:
+def assemble_evaluator_prompt(lang_code: str, task_code: str = "PR", tier: str = "BASIC") -> str:
     """
     Merakit EVALUATOR PROMPT lengkap dengan:
     1. Critical Thinking preamble (Skeptical Senior Annotator persona)
@@ -238,7 +245,7 @@ def assemble_evaluator_prompt(lang_code: str, task_code: str = "PR") -> str:
     ct_prompt = CRITICAL_THINKING_PREAMBLE.replace("{{TARGET_LANGUAGE}}", lang_name)
 
     # 2. Rakit master prompt
-    master = assemble_master_prompt(lang_code, task_code)
+    master = assemble_master_prompt(lang_code, task_code, tier)
 
     # 3. Gabungkan
     evaluator_prompt = f"{ct_prompt}\n\n{master}"

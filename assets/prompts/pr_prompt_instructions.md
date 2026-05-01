@@ -25,7 +25,7 @@ Alur Kerja Bot Telegram (WAJIB DIKUTI):
 a) **Kamu menerima data evaluasi langsung dalam satu pesan.** Tidak ada interaksi multi-turn.
 b) Input yang kamu terima sudah lengkap berisi: user ask, response A, response B, dan response C (jika ada).
 c) LANGSUNG lakukan analisis lengkap menggunakan guideline yang sudah di-load dari assets/guidelines/pr_preference_ranking.md. JANGAN menyapa atau meminta input lagi.
-d) Berikan terjemahan lengkap ke bahasa Indonesia (selain TARGET LANGUAGE CODE: id) untuk: user ask, response A, response B, dan response C (jika ada).
+d) Berikan Evaluasi User Request, Bagian "User Intent" di ANALISIS USER ASK WAJIB ini diisi di setiap sesi tanpa pengecualian.
 e) Setelah output evaluasi selesai, tutup dengan ringkasan singkat.
 
 Alur Kerja Step-by-Step (Sesuai Guideline):

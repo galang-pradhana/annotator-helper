@@ -967,18 +967,33 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "🔹 **Opsi 2: Bertahap**\n"
                 "Kirim User Input dulu, lalu Response, baru ketik **/next**."
             )
-        elif "CYU" in final_task_code:
-            task_name = "CYU — Website Topic / Topline"
+        elif final_task_code == "CYU_TOPLINE_SUMMARIZATION":
+            task_name = "CYU — Topline Summarization"
             detail = (
                 "📋 **Cara Input (Pilih salah satu):**\n\n"
                 "🔹 **Opsi 1: All-in-One**\n"
                 "Paste dalam **satu pesan**:\n"
-                "`User: [isi]`\n"
+                "`Instruction: [isi]`\n"
+                "`Original Input Text: [isi]`\n"
+                "`Response A: [isi]`\n"
+                "`Response B: [isi]`\n"
+                "`Response C: [isi — opsional]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim **Instruction** dan **Original Input Text** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
+            )
+        elif "CYU" in final_task_code:
+            task_name = "CYU — Website Topic"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One**\n"
+                "Paste dalam **satu pesan**:\n"
+                "`Original Input Text: [isi]`\n"
                 "`Response A: [isi]`\n"
                 "`Response B: [isi]`\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
-                "Kirim **User** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
+                "Kirim **Original Input Text** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
             )
         elif "TC" in final_task_code or "PROOFREAD" in final_task_code:
             task_name = "TC — Message Reply / Proofreading"
@@ -986,12 +1001,13 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "📋 **Cara Input (Pilih salah satu):**\n\n"
                 "🔹 **Opsi 1: All-in-One**\n"
                 "Paste dalam **satu pesan**:\n"
-                "`User Ask: [isi]`\n"
+                "`User: [isi]`\n"
                 "`Response A: [isi]`\n"
                 "`Response B: [isi]`\n"
+                "`Response C: [isi — opsional]`\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
-                "Kirim **User Ask** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
+                "Kirim **User** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
             )
         else:
             task_name = "Evaluasi"
@@ -1120,7 +1136,7 @@ async def _run_evaluation_background(
     final_task_code = task_type
 
     try:
-        evaluator_prompt = assemble_evaluator_prompt(lang_code, final_task_code)
+        evaluator_prompt = assemble_evaluator_prompt(lang_code, final_task_code, tier)
     except FileNotFoundError as e:
         await status_msg.edit_text(f"❌ Error: {e}")
         return
@@ -1708,7 +1724,7 @@ async def _run_vcg_evaluation_background(
 
     # Rakit evaluator prompt
     try:
-        evaluator_prompt = assemble_evaluator_prompt(lang_code, task_type)
+        evaluator_prompt = assemble_evaluator_prompt(lang_code, task_type, tier)
     except FileNotFoundError as e:
         await status_msg.edit_text(f"❌ Error: {e}")
         return
@@ -2389,8 +2405,8 @@ def _parse_evaluation_input(text: str) -> tuple[str, str, str, str] | None:
         if len(sections) >= 2: # Minimal 2 section (Input + Resp)
             # Detect label di section pertama
             first_sec = sections[0]
-            if re.match(r"^\s*(?:User\s*Input|Original\s*Input\s*Text|Original\s*Text|User\s*Ask|User)\s*:", first_sec, re.IGNORECASE):
-                user_ask = re.sub(r"^\s*(?:User\s*Input|Original\s*Input\s*Text|Original\s*Text|User\s*Ask|User)\s*:\s*", "", first_sec, flags=re.IGNORECASE).strip()
+            if re.match(r"^\s*(?:Instruction|User\s*Input|Original\s*Input\s*Text|Original\s*Text|User\s*Ask|User)\s*:", first_sec, re.IGNORECASE):
+                user_ask = re.sub(r"^\s*(?:Instruction|User\s*Input|Original\s*Input\s*Text|Original\s*Text|User\s*Ask|User)\s*:\s*", "", first_sec, flags=re.IGNORECASE).strip()
             else:
                 user_ask = first_sec # Fallback jika tidak ada label tapi ada separator
 
@@ -2406,7 +2422,7 @@ def _parse_evaluation_input(text: str) -> tuple[str, str, str, str] | None:
 
     # Coba format 2: regex-based extraction
     patterns = {
-        "user_ask": r"(?i)(?:(?:User\s*Ask|Original\s*(?:Input\s*)?Text|User\s*Input|User)\s*:\s*)([\s\S]*?)(?=Response\s*(?:A|:)|$)",
+        "user_ask": r"(?i)(?:(?:Instruction|User\s*Ask|Original\s*(?:Input\s*)?Text|User\s*Input|User)\s*:\s*)([\s\S]*?)(?=Response\s*(?:A|:)|$)",
         "resp_a": r"(?i)(?:Response\s*(?:A\s*)?:\s*)([\s\S]*?)(?=Response\s*B\s*:|$)",
         "resp_b": r"(?i)(?:Response\s*B\s*:\s*)([\s\S]*?)(?=Response\s*C\s*:|$)",
         "resp_c": r"(?i)(?:Response\s*C\s*:\s*)([\s\S]*?)$",

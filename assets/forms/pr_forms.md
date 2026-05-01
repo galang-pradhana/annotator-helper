@@ -49,4 +49,4 @@ d. 😍 Highly Satisfying
 
 Setelah rating tiap response, buat justifikasi draft:
 
-Please describe the reasons for your gradings (satu rangkuman utama dalam bahasa Indonesia DAN bahasa Inggris).
+Please describe the reasons for your gradings (satu rangkuman utama untuk keseluruhan hasil jawabanmu dalam satu paragraf padat dan jelas, dalam bahasa Indonesia DAN bahasa Inggris).
