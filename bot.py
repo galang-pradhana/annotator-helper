@@ -2556,7 +2556,6 @@ async def send_large_message(
     # 1. Persiapan konten (Escape HTML untuk keamanan, kecuali tag dasar yang kita inginkan)
     # Karena LLM sering menghasilkan karakter < > yang merusak HTML, kita escape dulu.
     # Tapi kita ingin mengizinkan <b>, <i>, <code>, <a>, <pre>.
-    
     def safe_html(t: str) -> str:
         """
         Mengonversi markdown sederhana ke HTML Telegram secara aman.
@@ -2564,8 +2563,10 @@ async def send_large_message(
         import re
         if not t:
             return ""
-        # 1. Escape entities
-        t = html.escape(t)
+        # 1. Escape entities manually (Telegram only supports &, <, >)
+        # We don't use html.escape because it escapes ' to &#x27; which Telegram REJECTS!
+        t = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        
         # 2. Bold (mendukung multiline)
         t = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', t, flags=re.DOTALL)
         # 3. Monospace
@@ -2573,6 +2574,14 @@ async def send_large_message(
         # 4. Bullet points
         t = re.sub(r'(?m)^\* ', r'• ', t)
         return t
+
+    # Hapus bungkus codeblock utama (```) dari output AI (jika AI mem-wrap seluruh output)
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:[a-zA-Z]*)\n?", "", text, count=1)
+    if text.endswith("```"):
+        text = re.sub(r"\n?```$", "", text, count=1)
+    text = text.strip()
 
     # Gunakan effective_message agar lebih aman di berbagai konteks (callback/message)
     msg_handle = update.effective_message if update.effective_message else update.message
@@ -2596,9 +2605,11 @@ async def send_large_message(
             return
         except Exception as e:
             logger.warning(f"HTML send failed: {e}. Falling back to plaintext.")
-            fallback_text = f"{text}\n\n{footer}" if footer else text
+            # Pastikan footer tidak terpotong dengan membatasi panjang teks utama
+            safe_text = text[:3800] 
+            fallback_text = f"{safe_text}\n\n{footer}" if footer else safe_text
             try:
-                await msg_handle.reply_text(fallback_text[:4000], reply_markup=reply_markup, read_timeout=30, write_timeout=30)
+                await msg_handle.reply_text(fallback_text, reply_markup=reply_markup, read_timeout=30, write_timeout=30)
             except Exception as inner_e:
                 logger.error(f"Fallback send also failed: {inner_e}")
             return
@@ -2637,15 +2648,15 @@ async def send_large_message(
             await msg_handle.reply_text("✅ Selesai.", reply_markup=reply_markup, read_timeout=30, write_timeout=30)
 
 
-    # 4. FILE FALLBACK: Jika > 1 chunk, kirim file lengkap agar user punya backup
-    if len(chunks) > 1:
+    # 4. FILE FALLBACK: Selalu kirim backup jika teks panjang agar aman dari trunkasi Telegram
+    if len(chunks) > 1 or len(text) >= 3000:
         try:
             file_content = f"{disclaimer}\n\n{text}\n\n{footer}"
             bio = io.BytesIO(file_content.encode('utf-8'))
             bio.name = "hasil_evaluasi_lengkap.txt"
             await update.message.reply_document(
                 document=bio,
-                caption="📄 **File Backup**: Hasil evaluasi lengkap (Gunakan jika pesan di atas terpotong).",
+                caption="📄 **File Backup**: Hasil evaluasi lengkap (Gunakan jika pesan di atas terpotong/hilang format).",
                 parse_mode="Markdown"
             )
         except Exception as e:
