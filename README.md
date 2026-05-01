@@ -108,10 +108,5 @@
 - `/broadcast <message>`: Send a message to all registered users.
 
 ---
-
-## 📄 License
-
-This project is private and intended for use by the **Centific Annotation** team.
-
 ---
 *Created with ❤️ by Galang Pradhana*
