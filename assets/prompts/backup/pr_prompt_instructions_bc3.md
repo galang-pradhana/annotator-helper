@@ -144,110 +144,6 @@ Kategori issue (pilih semua yang berlaku):
 `Vocabulary` / `Awkward writing` / `Formatting & punctuation` / `Grammar` / `Phrase or idiom` /
 `Units of measurement` / `Wrong language` / `Other`
 
-### Dimensi 2 — SUPPLEMENTAL: TARGET LANGUAGE WRITING STANDARDS
-
-⚠️ WAJIB DIBACA SEBELUM MENGEVALUASI LOCALIZATION
-
-Kamu mengevaluasi sebagai penutur asli {{TARGET_LANGUAGE}}. Sebelum menilai,
-aktifkan pengetahuan spesifik tentang konvensi penulisan bahasa tersebut
-menggunakan checklist berikut.
-
-─────────────────────────────────────────
-🔍 CHECKLIST PENULISAN BAHASA TARGET
-─────────────────────────────────────────
-
-**A. PUNCTUATION & FORMATTING**
-Tanyakan pada dirimu:
-  [ ] Apakah tanda baca yang digunakan sesuai konvensi LOKAL, bukan konvensi Inggris?
-      Contoh error yang harus ditangkap:
-      - Thai (th): Tidak ada spasi sebelum titik/koma; tanda baca Barat sering salah posisi
-      - Korean (ko): Tanda kutip pakai 「」atau『』bukan " "; tidak ada spasi antar kata di frasa tertentu
-      - Malay (ms): Tanda baca mengikuti konvensi Inggris TAPI harus konsisten (tidak mix-style)
-      - Japanese (ja): Titik → 。 Koma → 、 Bukan . dan , gaya Latin
-      - Arabic (ar): Tanda tanya ؟ dan koma ، — bukan versi Latin; teks kanan ke kiri
-      - Vietnamese (vi): Diacritic harus lengkap dan akurat; kehilangan diacritic = spelling error
-  [ ] Apakah format angka, tanggal, dan waktu sesuai standar lokal?
-      - th: วันที่ DD/MM/YYYY (Buddhist calendar jika relevan)
-      - ko: YYYY년 MM월 DD일
-      - ms/id: DD/MM/YYYY atau "3 Januari 2025"
-      - ar: قد يُستخدم التقويم الهجري
-  [ ] Apakah spasi antar kata/frasa mengikuti aturan bahasa target?
-      (Thai dan Khmer tidak pakai spasi antar kata, hanya antar kalimat/frasa)
-
-**B. LOCAL PERSPECTIVE & NON-LOCAL PERSPECTIVE**
-Tanyakan pada dirimu:
-  [ ] Apakah response mengasumsikan konteks yang BUKAN milik locale target?
-      Contoh error:
-      - Menyebut "winter holiday" untuk locale tropis (th, ms, id)
-      - Menggunakan referensi budaya Barat tanpa adaptasi (Halloween, Thanksgiving)
-      - Memberikan contoh harga dalam USD untuk user non-USD locale tanpa konversi
-      - Menyebut institusi/brand yang tidak dikenal di locale target
-  [ ] Apakah perspective-nya over-specified?
-      (Misal: menyebut "di Malaysia" terus-terusan untuk user Malaysia — terasa tidak natural)
-  [ ] Apakah perspektif kulturalnya netral atau justru stereotype?
-      (Tone terdengar seperti "orang luar yang menjelaskan tentang negara itu")
-
-**C. VOCABULARY & NATURAL WRITING**
-Tanyakan pada dirimu:
-  [ ] Apakah kata-kata yang digunakan adalah kosakata SEHARI-HARI yang dipakai penutur asli,
-      bukan hasil terjemahan literal dari Bahasa Inggris?
-      Contoh error:
-      - ms: "Saya memerlukan maklumat" terasa formal; "Saya nak tahu" lebih natural di konteks kasual
-      - ko: Penggunaan Hanja-heavy term di konteks santai terasa kaku
-      - th: Mixing politeness level (ครับ/ค่ะ) secara tidak konsisten
-  [ ] Apakah ada kata pinjaman (loanword) yang salah dieja atau digunakan secara janggal?
-  [ ] Apakah response terasa seperti hasil machine-translation (awkward word order,
-      calque langsung dari Inggris)?
-
-**D. SPELLING (UNTUK BAHASA TARGET)**
-  [ ] Cek ejaan bukan hanya typo umum, tapi juga:
-      - Kesalahan penggunaan huruf yang secara visual mirip (mis. bahasa Arab: ح vs خ)
-      - Diacritic yang hilang atau salah posisi (mis. Thai tone marks, Vietnamese vowels)
-      - Kapitalisasi yang tidak sesuai konvensi lokal
-      - Penulisan angka (bilangan) dalam kata: apakah sesuai aturan bahasa target?
-
-**E. GRAMMAR (SPECIFIK BAHASA TARGET)**
-  [ ] Apakah struktur kalimat mengikuti pola ASLI bahasa target, bukan pola bahasa Inggris?
-      Contoh:
-      - ms/id: Urutan kata Subjek-Predikat-Objek dengan modifikasi lokal
-      - ko/jp: SOV (Subjek-Objek-Verba) — verba di akhir
-      - ar: VSO (Verba-Subjek-Objek) adalah pola umum
-      - th: Tidak ada konjugasi verba; tense ditandai partikel waktu
-  [ ] Apakah partikel, kata bantu, atau honorifik digunakan dengan benar?
-      - ko: 은/는 vs 이/가 — particle kejelasan topik vs subjek
-      - jp: は vs が — perlu presisi
-      - th: ครับ/ค่ะ/นะ — level kesopanan harus konsisten dengan register
-
-─────────────────────────────────────────
-🚩 FLAG OTOMATIS — LOCALIZATION ISSUES BERAT
-─────────────────────────────────────────
-
-Jika ditemukan salah satu di bawah ini, WAJIB flag sebagai Issues Present:
-  → Tanda baca gaya Latin dipakai di bahasa yang punya sistem tanda baca sendiri (ja, ar, th)
-  → Diacritic hilang di bahasa yang maknanya berubah tanpa diacritic (vi, th)
-  → Perspektif kulturalnya jelas bukan dari locale target (referensi institusi, musim, mata uang salah)
-  → Struktur kalimat mengikuti pola SOV/SVO yang salah untuk bahasa target
-  → Honorifik/partikel dipakai sembarangan atau tidak konsisten
-
-─────────────────────────────────────────
-📝 CARA MELAPORKAN TEMUAN DI FORM
-─────────────────────────────────────────
-
-Jika Issues Present, isi bagian "Temuan" dengan format ini:
-
-  Temuan: [nama issue, mis. "Formatting & punctuation"]
-  Detail: [contoh spesifik dari teks yang salah] → [seharusnya seperti ini]
-  Alasan: [jelaskan mengapa ini melanggar konvensi {{TARGET_LANGUAGE}}]
-
-Contoh pengisian yang BAIK:
-  Temuan: Formatting & punctuation
-  Detail: Response menggunakan tanda tanya "?" → Seharusnya "؟" untuk teks Arab
-  Alasan: Bahasa Arab menggunakan tanda tanya mirrored (؟) bukan versi Latin.
-
-Contoh pengisian yang BURUK (jangan lakukan ini):
-  Temuan: Ada masalah punctuation.
-  (Tidak ada contoh, tidak ada penjelasan spesifik)
-
 ### Dimensi 3: Concision
 
 ```
@@ -544,8 +440,6 @@ Sebelum mengirim output, verifikasi checklist ini secara internal:
 [ ] Apakah "User Intent" di ANALISIS USER ASK sudah terisi (tidak kosong/hilang)?
 [ ] Apakah tag <database> dan </database> sudah terpasang dengan benar?
 [ ] Apakah justifikasi ditulis HANYA di section "📝 JUSTIFIKASI AKHIR" (bukan di tiap form response)?
-[ ] Apakah evaluasi Localization sudah menggunakan checklist penulisan bahasa target
-    (punctuation lokal, perspektif lokal, grammar spesifik bahasa)?
 ```
 
 Jika semua ✅ → kirim output. Jika ada yang ❌ → perbaiki dulu sebelum output.

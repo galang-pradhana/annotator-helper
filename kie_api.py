@@ -436,18 +436,22 @@ async def _call_kie_ai_internal_multimodal(
 
 # ── OpenRouter Fallback ───────────────────────────────────────────────────────
 
-def _map_to_openrouter_model(kie_model_name: str) -> str:
-    """Memetakan nama model Kie.ai ke model OpenRouter sesuai preferensi user."""
+def _map_to_openrouter_model(kie_model_name: str, is_vision: bool = False) -> str:
+    """Memetakan nama model Kie.ai ke model OpenRouter sesuai preferensi user dan kapabilitas vision."""
     model = (kie_model_name or "").lower()
     
-    # BASIC tier diarahkan ke Gemini 2.5 Flash Lite
-    # Sangat hemat tapi penalaran jauh di atas Llama 3 8B gratisan.
-    if "flash" in model:
-        return "google/gemini-2.5-flash-lite"
+    # Jika task butuh baca gambar (Multimodal/VCG)
+    if is_vision:
+        if "flash" in model or "basic" in model:
+            return "google/gemini-3.1-flash-lite-preview"
+        return "google/gemini-3-flash-preview-20251217"
+    
+    # Text-only tasks
+    if "flash" in model or "basic" in model:
+        return "deepseek/deepseek-v4-flash"
         
-    # PRO/PREMIUM tier diarahkan ke DeepSeek V3.2
-    # Penggunaan Grok Fast di-rollback karena tidak valid, dialihkan ke DeepSeek V3.2
-    return "deepseek/deepseek-v3.2"
+    # PRO/PREMIUM tier diarahkan ke DeepSeek V3.2 Speciale
+    return "deepseek/deepseek-v3.2-speciale"
 
 async def call_openrouter_api(system_prompt: str, user_input: str, model_name: str) -> str:
     api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
@@ -499,7 +503,7 @@ async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, ima
     if not api_key:
         return "❌ **OpenRouter API Key tidak ditemukan di .env**"
         
-    or_model = _map_to_openrouter_model(model_name)
+    or_model = _map_to_openrouter_model(model_name, is_vision=True)
     
     if "claude" in (model_name or "").lower():
         return "❌ **Model Claude sementara dinonaktifkan di fallback OpenRouter.**"

@@ -853,9 +853,11 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         return READY
 
     # ── Deteksi task VCG → gunakan flow IMAGE ───────────────────────────
-    subtask = context.user_data.get("SELECTED_SUBTASK", "")
+    final_task_code = context.user_data.get("SELECTED_SUBTASK", "")
     main_task = context.user_data.get("SELECTED_TASK", "")
-    vcg_subtasks = ["VCG_ADM_BASE_CREATION", "VCG_BACKGROUND_MESSAGE", "VCG_EDIT_MODEL"]
+    subtask = final_task_code
+    
+    vcg_subtasks = ["VCG_ADM_BASE_CREATION", "VCG_BACKGROUND_MESSAGE", "VCG_EDIT_MODEL", "VCG_PROMPT_REWRITE"]
     is_vcg = (subtask in vcg_subtasks) or (main_task == "VCG")
 
     if is_vcg:
@@ -863,24 +865,38 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         
         if subtask == "VCG_PROMPT_REWRITE":
             prompt_msg = (
-                "🚀 **Sesi Evaluasi VCG Prompt Rewrite Dimulai**\n\n"
-                "⚠️ **Disclaimer**: Respons AI dirancang untuk mempermudah pengerjaan task, "
-                "namun tidak bersifat absolut. Gunakan sebagai referensi pembanding.\n\n"
-                f"🎨 Mode: **Visual Content Generation — {vcg_model}**\n\n"
+                "🚀 **Sesi VCG — Prompt Rewrite Dimulai**\n\n"
+                "⚠️ *Bot ini hanya menerima input secara bertahap (step-by-step).*\n\n"
                 "📝 **Langkah 1/5** — Kirim **User Prompt**:\n"
                 "Contoh: `A woman holding coffee, photorealistic`\n\n"
-                "Setelah mengirim prompt, ketik **/next**."
+                "Setelah mengirim teks, ketik **/next** untuk lanjut mengirim Gambar A."
             )
-        else:
+        elif subtask == "VCG_EDIT_MODEL":
             prompt_msg = (
-                "🚀 **Sesi Evaluasi VCG Dimulai**\n\n"
-                "⚠️ **Disclaimer**: Respons AI dirancang untuk mempermudah pengerjaan task, "
-                "namun tidak bersifat absolut. Gunakan sebagai referensi pembanding.\n\n"
-                f"🎨 Mode: **Visual Content Generation — {vcg_model}**\n\n"
+                "🚀 **Sesi VCG — Edit Model Dimulai**\n\n"
+                "⚠️ *Bot ini hanya menerima input secara bertahap (step-by-step).*\n\n"
+                "📝 **Langkah 1/4** — Kirim **User Prompt**, **Input Style**, dan **Output Style**:\n"
+                "Format: `[User Prompt] | [Input Style] | [Output Style]`\n"
+                "Contoh: `Change the car color to red | Photorealistic | Cinematic`\n\n"
+                "Setelah mengirim teks, ketik **/next** untuk lanjut mengirim Gambar A (Input Image)."
+            )
+        elif subtask == "VCG_BACKGROUND_MESSAGE":
+            prompt_msg = (
+                "🚀 **Sesi VCG — Background Message Dimulai**\n\n"
+                "⚠️ *Bot ini hanya menerima input secara bertahap (step-by-step).*\n\n"
+                "📝 **Langkah 1/4** — Kirim **User Prompt** dan **Background Message**:\n"
+                "Format: `[User Prompt] | [Background Message]`\n"
+                "Contoh: `A modern kitchen | Include a coffee maker`\n\n"
+                "Setelah mengirim teks, ketik **/next** untuk lanjut mengirim Gambar A."
+            )
+        else: # ADM_BASE_CREATION
+            prompt_msg = (
+                "🚀 **Sesi VCG — ADM/Base Creation Dimulai**\n\n"
+                "⚠️ *Bot ini hanya menerima input secara bertahap (step-by-step).*\n\n"
                 "📝 **Langkah 1/4** — Kirim **User Prompt** dan **Target Style**:\n"
                 "Format: `[User Prompt] | [Target Style]`\n"
-                "Contoh: `A woman holding coffee, photorealistic | Cinematic`\n\n"
-                "Setelah mengirim prompt, ketik **/next**."
+                "Contoh: `A woman holding coffee | Cinematic`\n\n"
+                "Setelah mengirim teks, ketik **/next** untuk lanjut mengirim Gambar A."
             )
             
         await update.message.reply_text(prompt_msg, parse_mode="Markdown")
@@ -936,7 +952,9 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "`Conversation: [isi]`\n"
                 "`User Profiles: [isi]`\n"
                 "`Response A1: [isi]`\n"
+                "`Response A2: [isi — opsional]`\n"
                 "`Response B1: [isi]`\n"
+                "`Response B2: [isi — opsional]`\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
                 "Kirim bagian per bagian (Conversation dulu, dst), lalu ketik **/next**."
@@ -948,9 +966,11 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "🔹 **Opsi 1: All-in-One (Cepat)**\n"
                 "Paste format ini dalam **satu pesan**:\n"
                 "`Original Text: [isi]`\n"
+                "`User Selected Text: [isi]`\n"
                 "`User Query: [isi]`\n"
                 "`Response A: [isi]`\n"
                 "`Response B: [isi]`\n"
+                "`Response C: [isi — opsional]`\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
                 "Kirim bagian per bagian, lalu ketik **/next**."
@@ -996,19 +1016,48 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "Kirim **Original Input Text** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
             )
         elif "TC" in final_task_code or "PROOFREAD" in final_task_code:
-            task_name = "TC — Message Reply / Proofreading"
-            detail = (
-                "📋 **Cara Input (Pilih salah satu):**\n\n"
-                "🔹 **Opsi 1: All-in-One**\n"
-                "Paste dalam **satu pesan**:\n"
-                "`User: [isi]`\n"
-                "`Response A: [isi]`\n"
-                "`Response B: [isi]`\n"
-                "`Response C: [isi — opsional]`\n"
-                "Lalu ketik **/next**.\n\n"
-                "🔹 **Opsi 2: Bertahap**\n"
-                "Kirim **User** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
-            )
+            if final_task_code == "TC_MESSAGE_REPLY":
+                task_name = "TC — Message Reply"
+                input_label = "User"
+                opsi2_label = "User"
+            elif final_task_code == "TC_PROOFREADING":
+                task_name = "TC — Proofreading"
+                input_label = "User"
+                opsi2_label = "User"
+            elif final_task_code == "WRITING_TOOL_PROOFREAD_V2":
+                task_name = "Writing Tool — Proofread V2"
+                detail = (
+                    "📋 **Cara Input (Pilih salah satu):**\n\n"
+                    "🔹 **Opsi 1: All-in-One**\n"
+                    "Paste dalam **satu pesan**:\n"
+                    "`Original Input Text: [isi]`\n"
+                    "`Response A (Proofread Copy): [isi]`\n"
+                    "`Response B (Proofread Copy): [isi]`\n"
+                    "`Response C (Proofread Copy): [isi — opsional]`\n"
+                    "Lalu ketik **/next**.\n\n"
+                    "🔹 **Opsi 2: Bertahap**\n"
+                    "Kirim **Original Input Text** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
+                )
+                # Lewati set detail generic di bawah
+                input_label = None 
+            else:
+                task_name = "TC — Message Reply / Proofreading"
+                input_label = "User / Original Input Text"
+                opsi2_label = "User / Original Input Text"
+                
+            if input_label:
+                detail = (
+                    "📋 **Cara Input (Pilih salah satu):**\n\n"
+                    "🔹 **Opsi 1: All-in-One**\n"
+                    "Paste dalam **satu pesan**:\n"
+                    f"`{input_label}: [isi]`\n"
+                    "`Response A: [isi]`\n"
+                    "`Response B: [isi]`\n"
+                    "`Response C: [isi — opsional]`\n"
+                    "Lalu ketik **/next**.\n\n"
+                    "🔹 **Opsi 2: Bertahap**\n"
+                    f"Kirim **{opsi2_label}** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
+                )
         else:
             task_name = "Evaluasi"
             detail = (
@@ -1329,9 +1378,22 @@ async def next_process_single_shot(update: Update, context: ContextTypes.DEFAULT
 
 
 async def next_to_resp_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    task_code = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    first_input_name = "User Ask / Input Utama"
+    
+    if "PROOFREAD_V2" in task_code or "CYU_WEBSITE" in task_code:
+        first_input_name = "Original Input Text"
+    elif "CYU_TOPLINE" in task_code:
+        first_input_name = "Instruction & Original Input Text"
+    elif "TC" in task_code:
+        first_input_name = "User"
+    elif "AFM" in task_code:
+        first_input_name = "User Input"
+
     if not context.user_data.get('temp_user_ask'):
         await update.message.reply_text(
-            "❌ Anda belum mengirim User Ask. Silakan kirim teksnya dulu."
+            f"❌ Anda belum mengirim **{first_input_name}**. Silakan kirim teksnya dulu.",
+            parse_mode="Markdown"
         )
         return COLLECTING_USER_ASK
 
@@ -2685,6 +2747,17 @@ async def unknown_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #  MAIN — Application Setup
 # ══════════════════════════════════════════════════════════════════════════
 
+async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Log the error and handle specific telegram.error exceptions."""
+    from telegram.error import BadRequest
+    
+    if isinstance(context.error, BadRequest):
+        if "Message is not modified" in str(context.error):
+            logger.debug("Ignored BadRequest: Message is not modified")
+            return
+            
+    logger.error("Exception while handling an update:", exc_info=context.error)
+
 async def post_init(application: Application) -> None:
     """Inisialisasi database di dalam event loop bot."""
     await init_db()
@@ -2840,6 +2913,9 @@ def main():
     # 4. Unknown Message/Command Handler (Catch-all)
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command), group=1)
     app.add_handler(MessageHandler(filters.ALL, unknown_message), group=1)
+
+    # 5. Global Error Handler
+    app.add_error_handler(global_error_handler)
 
     # ── Start: Webhook or Polling ─────────────────────────────────────────
     WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
