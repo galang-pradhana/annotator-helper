@@ -92,7 +92,7 @@ Step 4 → Evaluasi Gambar A secara independen (semua dimensi).
 Step 5 → Evaluasi Gambar B secara independen (semua dimensi).
 Step 6 → Evaluasi Gambar C jika ada (semua dimensi).
 Step 7 → Hitung Preference Ranking (komparasi A↔B, C↔B, A↔C).
-Step 8 → Tulis JUSTIFIKASI AKHIR (BI + EN).
+Step 8 → Tulis JUSTIFIKASI AKHIR (BI + EN) untuk setiap komparasi (komparasi A↔B, C↔B, A↔C).
 Step 9 → BERHENTI.
 ```
 
@@ -649,6 +649,15 @@ Alasan: [jelaskan dalam Bahasa Indonesia]
 [a. A Much Better / b. A Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
 Alasan: [jelaskan dalam Bahasa Indonesia]
 
+═══════════════════════════════════════════
+📝 JUSTIFIKASI AKHIR 
+═══════════════════════════════════════════
+
+[Bahasa Indonesia]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
+semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
+[English]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
+semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
+
 ── C vs B ── ← hapus seluruh blok ini jika tidak ada Gambar C
 
 1. Between the two images, which has better Visual Quality?
@@ -666,6 +675,15 @@ Alasan: [...]
 4. Between the two images, which better represents the style requested in the prompt?
 [a. C Much Better / b. C Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
 Alasan: [...]
+
+═══════════════════════════════════════════
+📝 JUSTIFIKASI AKHIR C vs B
+═══════════════════════════════════════════
+
+[Bahasa Indonesia]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
+semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
+[English]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
+semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
 
 ── A vs C ── ← hapus seluruh blok ini jika tidak ada Gambar C
 
@@ -685,10 +703,19 @@ Alasan: [...]
 [a. A Much Better / b. A Slightly Better / c. Same / d. C Slightly Better / e. C Much Better]
 Alasan: [...]
 
+═══════════════════════════════════════════
+📝 JUSTIFIKASI AKHIR A vs C
+═══════════════════════════════════════════
+
+[Bahasa Indonesia]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
+semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
+[English]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
+semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
+
 </database>
 
 ═══════════════════════════════════════════
-📝 JUSTIFIKASI AKHIR
+📝 JUSTIFIKASI AKHIR SEMUA 
 ═══════════════════════════════════════════
 
 [Bahasa Indonesia]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
