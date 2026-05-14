@@ -183,8 +183,8 @@ async def check_access_middleware(update: Update, context: ContextTypes.DEFAULT_
             raise ApplicationHandlerStop()
         context.user_data["last_request_time"] = now
 
-    # BYPASS: Biarkan command utama lolos
-    if text.startswith(("/start", "/cancel", "/deposit", "/add_balance", "/add", "/stats", "/help", "/status", "/history", "/user", "/broadcast", "/check_fail", "/maintenance")):
+    # BYPASS: Biarkan command utama lolos dari rate limit
+    if text.startswith(("/start", "/cancel", "/deposit", "/add_balance", "/add", "/stats", "/help", "/status", "/history", "/user", "/broadcast", "/check_fail", "/maintenance", "/mulai", "/next", "/done", "/skip")):
         return
 
 
@@ -452,6 +452,7 @@ async def task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if task_code == "VCG":
         vcg_subtask_keyboard = [
             [InlineKeyboardButton("🎨 ADM - Base Creation Model", callback_data="vcgsub_VCG_ADM_BASE_CREATION")],
+            [InlineKeyboardButton("🎨 ADM - Multi Side (ADM-V2)", callback_data="vcgsub_VCG_ADM_MULTI_SIDE")],
             [InlineKeyboardButton("🖼️ Background Message", callback_data="vcgsub_VCG_BACKGROUND_MESSAGE")],
             [InlineKeyboardButton("✏️ Edit Model", callback_data="vcgsub_VCG_EDIT_MODEL")],
             [InlineKeyboardButton("✍️ Prompt Rewrite Variety Review", callback_data="vcgsub_VCG_PROMPT_REWRITE")],
@@ -470,6 +471,7 @@ async def task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         cyu_subtask_keyboard = [
             [InlineKeyboardButton("🌐 CYU Website Topic", callback_data="sub_CYU_WEBSITE_TOPIC")],
             [InlineKeyboardButton("📄 CYU Topline Summarization", callback_data="sub_CYU_TOPLINE_SUMMARIZATION")],
+            [InlineKeyboardButton("📝 CYU Action Items", callback_data="sub_CYU_ACTION_ITEMS")],
             [InlineKeyboardButton("🔙 Kembali", callback_data="back_task")],
         ]
         await query.edit_message_text(
@@ -517,6 +519,7 @@ async def vcg_subtask_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     # Tentukan label tampilan berdasarkan tombol yang dipilih
     label_map = {
         "vcgsub_VCG_ADM_BASE_CREATION": "ADM - Base Creation Model",
+        "vcgsub_VCG_ADM_MULTI_SIDE": "ADM - Multi Side (ADM-V2)",
         "vcgsub_VCG_BACKGROUND_MESSAGE": "Background Message",
         "vcgsub_VCG_EDIT_MODEL": "Edit Model",
         "vcgsub_VCG_PROMPT_REWRITE": "Prompt Rewrite Variety Review",
@@ -609,6 +612,13 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
             "Satisfaction Categorization",
             "Pairwise Comparison & Insights"
         ],
+        "CYU_ACTION_ITEMS": [
+            "Skip Check & Proper No Summary Check",
+            "Evaluate Original Input (Irregularity & Safety)",
+            "Evaluate Composition & Instruction Following",
+            "Evaluate Groundedness & Comprehensiveness",
+            "Satisfaction Rating & Pairwise Comparison"
+        ],
         # VCG — Visual Content Generation
         "VCG_ADM_BASE_CREATION": [
             "Safety Flags (Violent/Sexual/Offensive/Trademarked/etc.)",
@@ -621,6 +631,15 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
             "Comparison A↔B (Visual Quality, SI, Alignment, Style)",
             "Comparison C↔B (Visual Quality, SI, Alignment, Style)",
             "Comparison A↔C (Visual Quality, SI, Alignment, Style)",
+        ],
+        "VCG_ADM_MULTI_SIDE": [
+            "Prompt Analysis",
+            "Safety Flags",
+            "Visual Quality & Text in Image",
+            "Structural Integrity",
+            "Sketch Following & Outside Region (if applicable)",
+            "Prompt & Style Alignment",
+            "Preference Ranking (if ≥ 2 images)"
         ],
         "VCG_BACKGROUND_MESSAGE": [
             "Subject Placement (Off-center check)",
@@ -703,6 +722,8 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
         "WRITING_TOOL_PROOFREAD_V2": "Writing Tool - Proofreading V2",
         "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
         "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
+        "CYU_ACTION_ITEMS": "CYU — Action Items",
+        "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
     }
 
     q_list = QUESTIONS.get(task_code, QUESTIONS["PR"])
@@ -734,6 +755,10 @@ async def confirm_task_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     if action == "NO":
         return await back_task_callback(update, context)
+
+    # Bersihkan sisa slot gambar VCG dari sesi sebelumnya untuk mencegah state bocor
+    for key in ['vcg_image_a', 'vcg_image_b', 'vcg_image_c', 'vcg_image_d', 'temp_user_ask']:
+        context.user_data.pop(key, None)
 
     tg_id = update.effective_user.id
 
@@ -857,7 +882,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     main_task = context.user_data.get("SELECTED_TASK", "")
     subtask = final_task_code
     
-    vcg_subtasks = ["VCG_ADM_BASE_CREATION", "VCG_BACKGROUND_MESSAGE", "VCG_EDIT_MODEL", "VCG_PROMPT_REWRITE"]
+    vcg_subtasks = ["VCG_ADM_BASE_CREATION", "VCG_ADM_MULTI_SIDE", "VCG_BACKGROUND_MESSAGE", "VCG_EDIT_MODEL", "VCG_PROMPT_REWRITE"]
     is_vcg = (subtask in vcg_subtasks) or (main_task == "VCG")
 
     if is_vcg:
@@ -889,6 +914,15 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "Contoh: `A modern kitchen | Include a coffee maker`\n\n"
                 "Setelah mengirim teks, ketik **/next** untuk lanjut mengirim Gambar A."
             )
+        elif subtask == "VCG_ADM_MULTI_SIDE":
+            prompt_msg = (
+                "🚀 **Sesi VCG — ADM Multi Side (ADM-V2) Dimulai**\n\n"
+                "⚠️ *Bot ini hanya menerima input secara bertahap (step-by-step).*\n\n"
+                "📝 **Langkah 1/5** — Kirim **User Prompt** dan **Target Style**:\n"
+                "Format: `[User Prompt] | [Target Style]`\n"
+                "Contoh: `A woman holding coffee | Photorealistic`\n\n"
+                "Setelah mengirim teks, ketik **/next** untuk lanjut mengirim **Input Image**."
+            )
         else: # ADM_BASE_CREATION
             prompt_msg = (
                 "🚀 **Sesi VCG — ADM/Base Creation Dimulai**\n\n"
@@ -915,6 +949,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         "PR",
         "CYU_WEBSITE_TOPIC",
         "CYU_TOPLINE_SUMMARIZATION",
+        "CYU_ACTION_ITEMS",
         "TC_MESSAGE_REPLY",
         "TC_PROOFREADING",
         "WRITING_TOOL_PROOFREAD_V2"
@@ -970,6 +1005,21 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "`User Query: [isi]`\n"
                 "`Response A: [isi]`\n"
                 "`Response B: [isi]`\n"
+                "`Response C: [isi — opsional]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim bagian per bagian, lalu ketik **/next**."
+            )
+        elif final_task_code == "CYU_ACTION_ITEMS":
+            task_name = "CYU — Action Items"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One (Cepat)**\n"
+                "Paste format ini dalam **satu pesan**:\n"
+                "`Instruction: [isi]`\n"
+                "`Original Input Text: [isi]`\n"
+                "`Response A: [isi]`\n"
+                "`Response B: [isi — opsional]`\n"
                 "`Response C: [isi — opsional]`\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
@@ -1383,7 +1433,7 @@ async def next_to_resp_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     if "PROOFREAD_V2" in task_code or "CYU_WEBSITE" in task_code:
         first_input_name = "Original Input Text"
-    elif "CYU_TOPLINE" in task_code:
+    elif "CYU_TOPLINE" in task_code or "CYU_ACTION_ITEMS" in task_code:
         first_input_name = "Instruction & Original Input Text"
     elif "TC" in task_code:
         first_input_name = "User"
@@ -1420,9 +1470,23 @@ async def next_to_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return COLLECTING_RESP_A
 
+    # Deteksi task type dari subtask atau main task
+    task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM"]
+
+    if task_type in optional_b_tasks:
+        msg = (
+            "📥 **Langkah 3/4**: Kirim **Response B** (Opsional).\n"
+            "Ketik **/next** untuk lanjut ke Response C, atau ketik **/skip** jika tidak ada Response B (langsung proses)."
+        )
+    else:
+        msg = (
+            "📥 **Langkah 3/4**: Kirim **Response B**.\n"
+            "Setelah selesai, ketik **/next**."
+        )
+
     await update.message.reply_text(
-        "📥 **Langkah 3/4**: Kirim **Response B**.\n"
-        "Setelah selesai, ketik **/next**.",
+        msg,
         parse_mode="Markdown",
     )
     return COLLECTING_RESP_B
@@ -1436,8 +1500,25 @@ async def collect_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     return COLLECTING_RESP_B
 
 
+async def skip_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM"]
+
+    if task_type not in optional_b_tasks:
+        await update.message.reply_text(
+            "❌ Response B wajib diisi untuk task ini."
+        )
+        return COLLECTING_RESP_B
+
+    # Jika skip Response B, otomatis skip Response C juga
+    return await process_segmented_input(update, context)
+
+
 async def next_to_resp_c(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    if not context.user_data.get('temp_resp_b'):
+    task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM"]
+
+    if not context.user_data.get('temp_resp_b') and task_type not in optional_b_tasks:
         await update.message.reply_text(
             "❌ Anda belum mengirim Response B. Silakan kirim teksnya dulu."
         )
@@ -1506,29 +1587,41 @@ async def force_done_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def collect_vcg_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Terima User Prompt + Target Style untuk VCG."""
+    tg_id = update.effective_user.id
     text = update.message.text or ""
+    logger.info(f"[{tg_id}] Collecting VCG prompt: {text[:50]}...")
+    
     context.user_data['temp_user_ask'] = (
         context.user_data.get('temp_user_ask', "") + "\n" + text
     ).strip()
-    await update.message.reply_text(
-        "✅ Prompt diterima. Ketik **/next** untuk lanjut kirim Gambar A.",
-        parse_mode="Markdown",
-    )
+    subtask = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    if "MULTI_SIDE" in subtask:
+        msg = "✅ Prompt diterima. Ketik **/next** untuk lanjut kirim **Input Image**."
+    else:
+        msg = "✅ Prompt diterima. Ketik **/next** untuk lanjut kirim **Gambar A**."
+        
+    await update.message.reply_text(msg, parse_mode="Markdown")
     return COLLECTING_VCG_PROMPT
 
 
 async def vcg_next_to_image_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Transisi: Prompt → Gambar A."""
+    tg_id = update.effective_user.id
+    logger.info(f"[{tg_id}] vcg_next_to_image_a triggered")
     if not context.user_data.get('temp_user_ask'):
         await update.message.reply_text(
             "❌ Prompt belum dikirim. Kirim **User Prompt** dulu.",
             parse_mode="Markdown",
         )
         return COLLECTING_VCG_PROMPT
-    await update.message.reply_text(
-        "🖼️ **Langkah 2/4** — Kirim **Gambar A** (foto/image).",
-        parse_mode="Markdown",
-    )
+
+    subtask = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    if "MULTI_SIDE" in subtask:
+        msg = "🖼️ **Langkah 2/5** — Kirim **Input Image** (foto/image)."
+    else:
+        msg = "🖼️ **Langkah 2/4** — Kirim **Gambar A** (foto/image)."
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
     return COLLECTING_VCG_IMAGE_A
 
 
@@ -1546,11 +1639,14 @@ async def collect_vcg_image_a(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Ambil resolusi tertinggi
     file_id = photo[-1].file_id
     context.user_data['vcg_image_a'] = file_id
-    await update.message.reply_text(
-        "✅ **Gambar A** diterima!\n"
-        "Ketik **/next** untuk lanjut kirim Gambar B.",
-        parse_mode="Markdown",
-    )
+
+    subtask = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    if "MULTI_SIDE" in subtask:
+        msg = "✅ **Input Image** diterima!\nKetik **/next** untuk lanjut kirim **Response A**."
+    else:
+        msg = "✅ **Gambar A** diterima!\nKetik **/next** untuk lanjut kirim Gambar B."
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
     return COLLECTING_VCG_IMAGE_A
 
 
@@ -1558,14 +1654,18 @@ async def vcg_next_to_image_b(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Transisi: Gambar A → Gambar B."""
     if not context.user_data.get('vcg_image_a'):
         await update.message.reply_text(
-            "❌ Gambar A belum dikirim. Kirim gambarnya dulu.",
+            "❌ Gambar pertama belum dikirim. Kirim gambarnya dulu.",
             parse_mode="Markdown",
         )
         return COLLECTING_VCG_IMAGE_A
-    await update.message.reply_text(
-        "🖼️ **Langkah 3/4** — Kirim **Gambar B** (foto/image).",
-        parse_mode="Markdown",
-    )
+
+    subtask = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    if "MULTI_SIDE" in subtask:
+        msg = "🖼️ **Langkah 3/5** — Kirim **Response A** (foto/image)."
+    else:
+        msg = "🖼️ **Langkah 3/4** — Kirim **Gambar B** (foto/image)."
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
     return COLLECTING_VCG_IMAGE_B
 
 
@@ -1582,11 +1682,14 @@ async def collect_vcg_image_b(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     file_id = photo[-1].file_id
     context.user_data['vcg_image_b'] = file_id
-    await update.message.reply_text(
-        "✅ **Gambar B** diterima!\n"
-        "Ketik **/next** untuk lanjut kirim Gambar C.",
-        parse_mode="Markdown",
-    )
+
+    subtask = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    if "MULTI_SIDE" in subtask:
+        msg = "✅ **Response A** diterima!\nKetik **/next** untuk lanjut kirim **Response B**."
+    else:
+        msg = "✅ **Gambar B** diterima!\nKetik **/next** untuk lanjut kirim Gambar C."
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
     return COLLECTING_VCG_IMAGE_B
 
 
@@ -1594,13 +1697,15 @@ async def vcg_next_to_image_c(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Transisi: Gambar B → Gambar C."""
     if not context.user_data.get('vcg_image_b'):
         await update.message.reply_text(
-            "❌ Gambar B belum dikirim. Kirim gambarnya dulu.",
+            "❌ Gambar kedua belum dikirim. Kirim gambarnya dulu.",
             parse_mode="Markdown",
         )
         return COLLECTING_VCG_IMAGE_B
     subtask = context.user_data.get("SELECTED_SUBTASK", "")
     if subtask == "VCG_PROMPT_REWRITE":
         msg = "🖼️ **Langkah 4/5** — Kirim **Gambar C** (foto/image)."
+    elif "MULTI_SIDE" in subtask:
+        msg = "🖼️ **Langkah 4/5** — Kirim **Response B** (foto/image)."
     else:
         msg = (
             "🖼️ **Langkah 4/4** — Kirim **Gambar C** (opsional).\n"
@@ -1633,6 +1738,13 @@ async def collect_vcg_image_c(update: Update, context: ContextTypes.DEFAULT_TYPE
             parse_mode="Markdown",
         )
         return COLLECTING_VCG_IMAGE_C
+    elif "MULTI_SIDE" in subtask:
+        await update.message.reply_text(
+            "✅ **Response B** diterima!\n"
+            "Ketik **/next** untuk lanjut kirim **Response C** (opsional) atau **/skip**.",
+            parse_mode="Markdown",
+        )
+        return COLLECTING_VCG_IMAGE_C
     
     await update.message.reply_text(
         "✅ **Gambar C** diterima!\n"
@@ -1645,7 +1757,7 @@ async def collect_vcg_image_c(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def vcg_next_step_after_image_c(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Transisi: Gambar C → Proses (Default) atau Gambar D (Prompt Rewrite)."""
     subtask = context.user_data.get("SELECTED_SUBTASK", "")
-    if subtask == "VCG_PROMPT_REWRITE":
+    if subtask == "VCG_PROMPT_REWRITE" or "MULTI_SIDE" in subtask:
         return await vcg_next_to_image_d(update, context)
     else:
         return await process_vcg_images(update, context)
@@ -1655,14 +1767,18 @@ async def vcg_next_to_image_d(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Transisi: Gambar C → Gambar D (Khusus Prompt Rewrite)."""
     if not context.user_data.get('vcg_image_c'):
         await update.message.reply_text(
-            "❌ Gambar C belum dikirim. Kirim gambarnya dulu.",
+            "❌ Gambar ketiga belum dikirim. Kirim gambarnya dulu.",
             parse_mode="Markdown",
         )
         return COLLECTING_VCG_IMAGE_C
-    await update.message.reply_text(
-        "🖼️ **Langkah 5/5** — Kirim **Gambar D** (foto/image).",
-        parse_mode="Markdown",
-    )
+
+    subtask = context.user_data.get("SELECTED_SUBTASK", "")
+    if "MULTI_SIDE" in subtask:
+        msg = "🖼️ **Langkah 5/5** — Kirim **Response C** (opsional, foto/image).\nAtau ketik **/skip** jika tidak ada."
+    else:
+        msg = "🖼️ **Langkah 5/5** — Kirim **Gambar D** (foto/image)."
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
     return COLLECTING_VCG_IMAGE_D
 
 
@@ -1679,11 +1795,14 @@ async def collect_vcg_image_d(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     file_id = photo[-1].file_id
     context.user_data['vcg_image_d'] = file_id
-    await update.message.reply_text(
-        "✅ **Gambar D** diterima!\n"
-        "Ketik **/next** untuk memulai evaluasi.",
-        parse_mode="Markdown",
-    )
+
+    subtask = context.user_data.get("SELECTED_SUBTASK", "")
+    if "MULTI_SIDE" in subtask:
+        msg = "✅ **Response C** diterima!\nKetik **/next** untuk memulai evaluasi."
+    else:
+        msg = "✅ **Gambar D** diterima!\nKetik **/next** untuk memulai evaluasi."
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
     return COLLECTING_VCG_IMAGE_D
 
 
@@ -1703,11 +1822,15 @@ async def process_vcg_images(
         )
         return READY
 
-    if not file_id_a or not file_id_b:
-        await update.message.reply_text(
-            "❌ Minimal Gambar A dan Gambar B harus dikirim."
-        )
-        return COLLECTING_VCG_IMAGE_B
+    subtask = context.user_data.get("SELECTED_SUBTASK", "")
+    if "MULTI_SIDE" in subtask:
+        if not file_id_a or not file_id_b or not file_id_c:
+            await update.message.reply_text("❌ Minimal Input Image, Response A, dan Response B harus dikirim.")
+            return COLLECTING_VCG_IMAGE_C
+    else:
+        if not file_id_a or not file_id_b:
+            await update.message.reply_text("❌ Minimal Gambar A dan Gambar B harus dikirim.")
+            return COLLECTING_VCG_IMAGE_B
 
     status_msg = await update.message.reply_text(
         "⏳ Memproses evaluasi VCG...\n"
@@ -1792,19 +1915,45 @@ async def _run_vcg_evaluation_background(
         return
 
     # Susun user input payload
-    img_count = len(images_b64)
-    img_labels = ", ".join(f"Gambar {k}" for k in images_b64.keys())
-    
     if task_type == "VCG_PROMPT_REWRITE":
         instruction_ref = "VCG Prompt Rewrite Variety Review"
+    elif "MULTI_SIDE" in task_type:
+        instruction_ref = "VCG ADM Multi Side"
     else:
         instruction_ref = "VCG Base Creation & Edit Model"
 
-    user_input_text = (
-        f"USER PROMPT: {user_prompt}\n\n"
-        f"GAMBAR YANG DIEVALUASI: {img_labels} ({img_count} gambar)\n\n"
-        f"Lakukan evaluasi lengkap sesuai guideline {instruction_ref}."
-    )
+    if "MULTI_SIDE" in task_type:
+        new_images_b64 = {}
+        if "A" in images_b64: new_images_b64["Input Image"] = images_b64["A"]
+        if "B" in images_b64: new_images_b64["A"] = images_b64["B"]
+        if "C" in images_b64: new_images_b64["B"] = images_b64["C"]
+        if "D" in images_b64: new_images_b64["C"] = images_b64["D"]
+        images_b64 = new_images_b64
+
+        img_count = len(images_b64)
+
+        labels = []
+        if "Input Image" in images_b64: labels.append("Input Image")
+        if "A" in images_b64: labels.append("Response A")
+        if "B" in images_b64: labels.append("Response B")
+        if "C" in images_b64: labels.append("Response C")
+        img_labels_str = ", ".join(labels)
+        
+        user_input_text = (
+            f"USER PROMPT & TARGET STYLE: {user_prompt}\n\n"
+            f"GAMBAR YANG DIEVALUASI: {img_labels_str} ({img_count} gambar)\n\n"
+            f"Lakukan evaluasi lengkap sesuai guideline {instruction_ref}."
+        )
+    else:
+        img_count = len(images_b64)
+        img_labels = ", ".join(f"Gambar {k}" for k in images_b64.keys())
+        user_input_text = (
+            f"USER PROMPT: {user_prompt}\n\n"
+            f"GAMBAR YANG DIEVALUASI: {img_labels} ({img_count} gambar)\n\n"
+            f"Lakukan evaluasi lengkap sesuai guideline {instruction_ref}."
+        )
+
+    logger.info(f"[{tg_id}] VCG Evaluation keys sent: {list(images_b64.keys())} - Count: {img_count}")
 
     await status_msg.edit_text(
         "⏳ Memproses evaluasi VCG...\n"
@@ -2555,17 +2704,41 @@ def _format_user_input(
             )
 
     # Default logic (4 args: user_ask, resp_a, resp_b, resp_c)
-    # Berlaku juga untuk AFM (user_ask=Input, resp_a=Response)
     user_ask, resp_a, resp_b, resp_c = args[:4]
-    payload = (
-        f"USER ASK:\n{user_ask}\n\n"
-        f"RESPONSE A:\n{resp_a}\n\n"
-        f"RESPONSE B:\n{resp_b}"
-    )
+
+    # ── KHUSUS: CYU_ACTION_ITEMS ─────────────────────────────────────────
+    # Prompt mengharapkan label: INSTRUCTION & ORIGINAL INPUT TEXT, RESPONSE A/B/C (opsional)
+    # Jangan tampilkan RESPONSE B kosong — LLM akan menolak menganalisis jika ada label kosong.
+    if task_type == "CYU_ACTION_ITEMS":
+        payload = f"INSTRUCTION & ORIGINAL INPUT TEXT:\n{user_ask}\n\nRESPONSE A:\n{resp_a}"
+        if resp_b:
+            payload += f"\n\nRESPONSE B:\n{resp_b}"
+        else:
+            payload += "\n\n[Hanya 1 response yang dievaluasi — lewati Pairwise Comparison]"
+        if resp_c:
+            payload += f"\n\nRESPONSE C:\n{resp_c}"
+        return payload
+
+    # ── KHUSUS: CYU_TOPLINE_SUMMARIZATION ────────────────────────────────
+    if task_type == "CYU_TOPLINE_SUMMARIZATION":
+        payload = f"INSTRUCTION & ORIGINAL INPUT TEXT:\n{user_ask}\n\nRESPONSE A:\n{resp_a}"
+        if resp_b:
+            payload += f"\n\nRESPONSE B:\n{resp_b}"
+        else:
+            payload += "\n\n[Hanya 1 response yang dievaluasi — lewati Pairwise Comparison]"
+        if resp_c:
+            payload += f"\n\nRESPONSE C:\n{resp_c}"
+        return payload
+
+    # ── DEFAULT: PR, TC, AFM, CYU website, dan lainnya ───────────────────
+    # Berlaku juga untuk AFM (user_ask=User Input, resp_a=Response)
+    payload = f"USER ASK:\n{user_ask}\n\nRESPONSE A:\n{resp_a}"
+    if resp_b:
+        payload += f"\n\nRESPONSE B:\n{resp_b}"
+    else:
+        payload += "\n\n[Response B tidak disertakan — hanya 1 response yang dievaluasi, lewati Pairwise Comparison]"
     if resp_c:
         payload += f"\n\nRESPONSE C:\n{resp_c}"
-    else:
-        payload += "\n\n(Response C tidak disertakan — proses dengan 2 response saja)"
 
     return payload
 
@@ -2828,6 +3001,7 @@ def main():
             ],
             COLLECTING_RESP_B: [
                 CommandHandler("next", next_to_resp_c),
+                CommandHandler("skip", skip_resp_b),
                 CommandHandler("done", force_done_command),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, collect_resp_b),
             ],
@@ -2863,6 +3037,7 @@ def main():
             ],
             COLLECTING_VCG_IMAGE_D: [
                 CommandHandler("next", process_vcg_images),
+                CommandHandler("skip", process_vcg_images),
                 MessageHandler(filters.PHOTO, collect_vcg_image_d),
             ],
         },

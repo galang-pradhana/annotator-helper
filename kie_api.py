@@ -290,7 +290,8 @@ async def _call_kie_ai_internal_multimodal(
     if is_claude:
         content_parts = []
         for label, b64_data in images_b64.items():
-            content_parts.append({"type": "text", "text": f"**Gambar {label}:**"})
+            label_text = f"**{label}:**" if label == "Input Image" else f"**Gambar {label}:**"
+            content_parts.append({"type": "text", "text": label_text})
             content_parts.append({
                 "type": "image",
                 "source": {
@@ -313,7 +314,8 @@ async def _call_kie_ai_internal_multimodal(
     else:
         content_parts = []
         for label, b64_data in images_b64.items():
-            content_parts.append({"type": "text", "text": f"**Gambar {label}:**"})
+            label_text = f"**{label}:**" if label == "Input Image" else f"**Gambar {label}:**"
+            content_parts.append({"type": "text", "text": label_text})
             content_parts.append({
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{b64_data}"}
@@ -518,7 +520,8 @@ async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, ima
     
     content_parts = []
     for label, b64_data in images_b64.items():
-        content_parts.append({"type": "text", "text": f"**Gambar {label}:**"})
+        label_text = f"**{label}:**" if label == "Input Image" else f"**Gambar {label}:**"
+        content_parts.append({"type": "text", "text": label_text})
         content_parts.append({
             "type": "image_url",
             "image_url": {"url": f"data:image/jpeg;base64,{b64_data}"}

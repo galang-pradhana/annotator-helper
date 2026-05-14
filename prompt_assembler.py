@@ -124,6 +124,18 @@ ASSET_CONFIGS = {
         "prompts": "prompts/ta_writing_tools_writing_QA_instructions.md",
         "inputs": "inputs/ta_writing_tools_writing_QA_inputs.md",
     },
+    "CYU_ACTION_ITEMS": {
+        "guidelines": "guidelines/cyu_action_items.md",
+        "forms": "forms/cyu_action_items_forms.md",
+        "prompts": "prompts/cyu_action_items_instructions.md",
+        "inputs": "inputs/cyu_action_items_inputs.md",
+    },
+    "VCG_ADM_MULTI_SIDE": {
+        "guidelines": "guidelines/vcg_adm_multi_side_(ADM-V2).md",
+        "forms": "forms/vcg_adm_multi_side_(ADM-V2)_forms.md",
+        "prompts": "prompts/vcg_adm_multi_side_(ADM-V2)_instructions.md",
+        "inputs": "inputs/vcg_adm_multi_side_(ADM-V2)_inputs.md",
+    },
 }
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -308,6 +320,31 @@ TASK_SELF_AUDIT: dict[str, str] = {
 □ Apakah Completeness check mempertimbangkan error yang SEHARUSNYA diperbaiki tapi tidak?
 □ Apakah pairwise comparison konsisten dengan Correctness dan Completeness scores?
 """,
+    "CYU_ACTION_ITEMS": """\
+=== CYU ACTION ITEMS SELF-AUDIT — LAKUKAN INI SEBELUM OUTPUT ===
+□ Apakah Skip Check dilakukan PERTAMA? (sebelum analisis apapun)
+□ Apakah Proper No Summary Check dijalankan jika response = BLANK?
+□ Apakah PRIMARY vs TRIVIAL action items sudah diidentifikasi di Notepad sebelum evaluasi?
+□ Apakah Input Type sudah diidentifikasi (Email/Artikel/Resep/Manual/Notifikasi)?
+□ Jika Email: apakah action items dievaluasi untuk PENERIMA, bukan pengirim?
+□ Apakah TENSE EXCEPTION diterapkan? (present tense bukan penalti untuk Q3.8)
+□ Apakah Groundedness mencakup conditional clauses dan crawled web content?
+□ Apakah Comprehensiveness HANYA mengevaluasi primary action items (bukan trivial)?
+□ Apakah Satisfaction logic dijalankan dengan benar (HS hanya jika SEMUA Yes)?
+□ Apakah Pairwise Comparison di-skip jika hanya 1 response? (sesuai instruksi Step 8)
+□ Apakah tag <database> dan </database> terpasang di output?
+□ Apakah narasi dalam Bahasa Indonesia dan form label dalam Bahasa Inggris?
+□ Apakah output dimulai LANGSUNG tanpa sapaan atau intro?
+""",
+    "VCG_ADM_MULTI_SIDE": """\
+=== VCG ADM MULTI SIDE SELF-AUDIT — LAKUKAN INI SEBELUM OUTPUT ===
+□ Apakah safety flags diperiksa PERTAMA sebelum quality assessment?
+□ Apakah evaluasi ADM-V2 dilakukan per sisi (side) secara independen?
+□ Apakah Visual Quality Issues sudah mencakup: contrast, blur, stretch, artifacts?
+□ Apakah Structural Integrity mempertimbangkan anatomy, proporsi, dan perspektif per sisi?
+□ Apakah Input/Output Alignment dinilai secara ketat terhadap prompt asli?
+□ Apakah pairwise comparison konsisten dengan skor per response?
+""",
 }
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -451,6 +488,8 @@ def _get_task_display_name(task_code: str) -> str:
         "WRITING_TOOL_PROOFREAD_V2": "Writing Tool — Proofreading V2",
         "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
         "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
+        "CYU_ACTION_ITEMS": "CYU — Action Items",
+        "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
     }
     return TASK_DISPLAY.get(task_code.upper(), task_code.replace("_", " "))
 
