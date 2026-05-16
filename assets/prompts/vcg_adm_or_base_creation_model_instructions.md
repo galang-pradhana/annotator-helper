@@ -91,8 +91,8 @@ Step 3 → Isi Safety Flags untuk setiap gambar (A, B, C) — SEBELUM dimensi la
 Step 4 → Evaluasi Gambar A secara independen (semua dimensi).
 Step 5 → Evaluasi Gambar B secara independen (semua dimensi).
 Step 6 → Evaluasi Gambar C jika ada (semua dimensi).
-Step 7 → Hitung Preference Ranking (komparasi A↔B, C↔B, A↔C).
-Step 8 → Tulis JUSTIFIKASI AKHIR (BI + EN) untuk setiap komparasi (komparasi A↔B, C↔B, A↔C).
+Step 7 → Hitung Preference Ranking (komparasi A↔B, A↔C, C↔B).
+Step 8 → Tulis JUSTIFIKASI AKHIR (BI + EN) untuk setiap komparasi (komparasi A↔B, A↔C, C↔B).
 Step 9 → BERHENTI.
 ```
 
@@ -403,12 +403,13 @@ Rules:
 
 ```
 Scale ranking:
-  Much Better     = Perbedaan jelas dan signifikan; satu jauh lebih rendah kualitasnya
+  
+  Better     = Perbedaan jelas dan signifikan; satu jauh lebih rendah kualitasnya
   Slightly Better = Perbedaan noticeable tapi moderate; keunggulan minor;
                     lebih dekat ke input image jika skor sama
   Same            = Tidak ada perbedaan berarti; keduanya sama-sama memenuhi/gagal kriteria
 
-Pasangan yang dievaluasi: A↔B, C↔B, A↔C
+Pasangan yang dievaluasi: A↔B, A↔C, C↔B
 (C↔B bukan B↔C — ikuti urutan form)
 ```
 
@@ -633,20 +634,20 @@ Apparent Gender Representation: [Male-presenting / Female-presenting / Visible m
 
 ── A vs B ──
 
-1. Between the two images, which has better Visual Quality?
-[a. A Much Better / b. A Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
+1.  Overall, which side of the image is better?
+[a. A Better / b. A Slightly Better / c. Same / d. B Slightly Better / e. B Better]
 Alasan: [jelaskan dalam Bahasa Indonesia]
 
-2. Between the two images, which is better formed and more structurally sound?
-[a. A Much Better / b. A Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
+2. Between the two images, which has better aesthetic quality?
+[a. A Better / b. A Slightly Better / c. Same / d. B Slightly Better / e. B Better]
 Alasan: [jelaskan dalam Bahasa Indonesia]
 
-3. Between the two images, which better represents what was requested in the prompt?
-[a. A Much Better / b. A Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
+3. Between the two images, which is better formed and more structurally sound?
+[a. A Better / b. A Slightly Better / c. Same / d. B Slightly Better / e. B Better]
 Alasan: [jelaskan dalam Bahasa Indonesia]
 
-4. Between the two images, which better represents the style requested in the prompt?
-[a. A Much Better / b. A Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
+4. Between the two images, which better represents the style requested in the prompt? 
+[a. A Better / b. A Slightly Better / c. Same / d. B Slightly Better / e. B Better]
 Alasan: [jelaskan dalam Bahasa Indonesia]
 
 ═══════════════════════════════════════════
@@ -658,22 +659,50 @@ semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
 [English]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
 semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
 
-── C vs B ── ← hapus seluruh blok ini jika tidak ada Gambar C
+── A vs C ── ← hapus seluruh blok ini jika tidak ada Gambar C
 
-1. Between the two images, which has better Visual Quality?
-[a. C Much Better / b. C Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
+1.  Overall, which side of the image is better?
+[a. A Better / b. A Slightly Better / c. Same / d. C Slightly Better / e. C Better]
 Alasan: [...]
 
-2. Between the two images, which is better formed and more structurally sound?
-[a. C Much Better / b. C Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
+2. Between the two images, which has better aesthetic quality?
+[a. A Better / b. A Slightly Better / c. Same / d. C Slightly Better / e. C Better]
 Alasan: [...]
 
-3. Between the two images, which better represents what was requested in the prompt?
-[a. C Much Better / b. C Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
+3. Between the two images, which is better formed and more structurally sound?
+[a. A Better / b. A Slightly Better / c. Same / d. C Slightly Better / e. C Better]
 Alasan: [...]
 
 4. Between the two images, which better represents the style requested in the prompt?
-[a. C Much Better / b. C Slightly Better / c. Same / d. B Slightly Better / e. B Much Better]
+[a. A Better / b. A Slightly Better / c. Same / d. C Slightly Better / e. C Better]
+Alasan: [...]
+
+═══════════════════════════════════════════
+📝 JUSTIFIKASI AKHIR A vs C
+═══════════════════════════════════════════
+
+[Bahasa Indonesia]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
+semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
+[English]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
+semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
+
+
+── C vs B ── ← hapus seluruh blok ini jika tidak ada Gambar C
+
+1.  Overall, which side of the image is better?
+[a. C Better / b. C Slightly Better / c. Same / d. B Slightly Better / e. B Better]
+Alasan: [...]
+
+2. Between the two images, which has better aesthetic quality?
+[a. C Better / b. C Slightly Better / c. Same / d. B Slightly Better / e. B Better]
+Alasan: [...]
+
+3. Between the two images, which is better formed and more structurally sound?
+[a. C Better / b. C Slightly Better / c. Same / d. B Slightly Better / e. B Better]
+Alasan: [...]
+
+4. Between the two images, which better represents the style requested in the prompt?
+[a. C Better / b. C Slightly Better / c. Same / d. B Slightly Better / e. B Better]
 Alasan: [...]
 
 ═══════════════════════════════════════════
@@ -685,32 +714,7 @@ semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
 [English]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
 semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
 
-── A vs C ── ← hapus seluruh blok ini jika tidak ada Gambar C
 
-1. Between the two images, which has better Visual Quality?
-[a. A Much Better / b. A Slightly Better / c. Same / d. C Slightly Better / e. C Much Better]
-Alasan: [...]
-
-2. Between the two images, which is better formed and more structurally sound?
-[a. A Much Better / b. A Slightly Better / c. Same / d. C Slightly Better / e. C Much Better]
-Alasan: [...]
-
-3. Between the two images, which better represents what was requested in the prompt?
-[a. A Much Better / b. A Slightly Better / c. Same / d. C Slightly Better / e. C Much Better]
-Alasan: [...]
-
-4. Between the two images, which better represents the style requested in the prompt?
-[a. A Much Better / b. A Slightly Better / c. Same / d. C Slightly Better / e. C Much Better]
-Alasan: [...]
-
-═══════════════════════════════════════════
-📝 JUSTIFIKASI AKHIR A vs C
-═══════════════════════════════════════════
-
-[Bahasa Indonesia]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
-semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
-[English]: [satu paragraf padat merangkum keseluruhan evaluasi dan komparasi
-semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
 
 </database>
 
@@ -745,7 +749,7 @@ semua gambar — kekuatan, kelemahan, trade-off, dan pola umum yang ditemukan]
 [ ] Apakah form rating dicetak ulang apa adanya (tidak diparaphrase)?
 [ ] Apakah Essay Q6 ditulis dalam Bahasa Inggris?
 [ ] Apakah narasi/reasoning dalam Bahasa Indonesia?
-[ ] Apakah komparasi mengikuti urutan A↔B, C↔B, A↔C (bukan A↔B, B↔C, A↔C)?
+[ ] Apakah komparasi mengikuti urutan A↔B, A↔C, C↔B (bukan A↔B, A↔C, B↔C)?
 [ ] Apakah justifikasi akhir ada dua versi: BI + EN?
 [ ] Apakah tag <database> dan </database> terpasang dengan benar?
 [ ] Apakah ada klaim di luar guideline? (Jika ya → hapus)
