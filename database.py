@@ -28,8 +28,8 @@ engine = create_async_engine(
     future=True,
     pool_pre_ping=True,      # Cek koneksi hidup sebelum pakai
     pool_recycle=1800,       # Recycle koneksi setiap 30 menit
-    pool_size=20,            # Naikkan pool size awal
-    max_overflow=30,         # Max tambahan koneksi jika pool penuh
+    pool_size=50,            # Siap untuk 50 user aktif instan
+    max_overflow=50,         # Tambahan 50 koneksi jika 50 penuh (total 100)
     connect_args={
         "prepared_statement_cache_size": 0,
         "statement_cache_size": 0

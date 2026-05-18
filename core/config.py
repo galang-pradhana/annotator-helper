@@ -1,0 +1,51 @@
+import os
+
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+MAINTENANCE_MODE = False
+
+TIER_PRICING = {
+    "BASIC": 99,
+    "PRO": 225,
+    "PREMIUM": 225,
+}
+
+TIER_MODELS = {
+    "BASIC": "gemini-3-flash",
+    "PRO": "gemini-3.1-pro",
+    "PREMIUM": "claude-sonnet-4-6",
+}
+
+TIER_DISPLAY_LABELS = {
+    "BASIC": "Basic",
+    "PRO": "Pro",
+    "PREMIUM": "Premium",
+}
+
+TIER_DISPLAY_RANGES = {
+    "BASIC": "85 - 120",
+    "PRO": "200 - 250",
+    "PREMIUM": "200 - 250",
+}
+
+(
+    SELECTING_LANG,
+    SELECTING_PROJECT,
+    SELECTING_TASK,
+    CONFIRMING_TASK,
+    SELECTING_TIER,
+    READY,
+    SELECTING_SUBTASK,
+    SELECTING_VCG_SUBTASK,
+    COLLECTING_USER_ASK,
+    COLLECTING_RESP_A,
+    COLLECTING_RESP_B,
+    COLLECTING_RESP_C,
+    COLLECTING_VCG_PROMPT,
+    COLLECTING_VCG_IMAGE_A,
+    COLLECTING_VCG_IMAGE_B,
+    COLLECTING_VCG_IMAGE_C,
+    COLLECTING_VCG_IMAGE_D,
+    COLLECTING_SINGLE_SHOT,
+) = range(18)
+
+DEPOSIT_ASK_NOMINAL = 100
