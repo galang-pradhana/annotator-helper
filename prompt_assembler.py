@@ -137,6 +137,12 @@ ASSET_CONFIGS = {
         "prompts": "prompts/vcg_adm_multi_side_(ADM-V2)_instructions.md",
         "inputs": "inputs/vcg_adm_multi_side_(ADM-V2)_inputs.md",
     },
+    "TA_INTELLIGENT_POLLS": {
+        "guidelines": "guidelines/ta_intelligent_polls.md",
+        "forms": "forms/ta_intelligent_polls_forms.md",
+        "prompts": "prompts/ta_intelligent_polls_instructions.md",
+        "inputs": "inputs/ta_intelligent_polls_inputs.md",
+    },
 }
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -346,6 +352,19 @@ TASK_SELF_AUDIT: dict[str, str] = {
 □ Apakah Input/Output Alignment dinilai secara ketat terhadap prompt asli?
 □ Apakah pairwise comparison konsisten dengan skor per response?
 """,
+    "TA_INTELLIGENT_POLLS": """\
+=== TA INTELLIGENT POLLS SELF-AUDIT — LAKUKAN INI SEBELUM OUTPUT ===
+□ Apakah saya melakukan Skip Check terlebih dahulu?
+□ Apakah saya menilai Proper No Reply di Step 1 sebelum dimensi lainnya?
+□ Jika response kosong DAN no poll is appropriate: Apakah Following=Yes dan skip Step 3-7?
+□ Apakah judul poll dan opsi HANYA berasal dari percakapan (Groundedness)?
+□ Apakah penulisan poll title berupa frase ringkas dan bukan kalimat lengkap (Composition)?
+□ Apakah opsi terurut sesuai alur waktu di percakapan (Comprehensiveness)?
+□ Apakah typo di percakapan sudah dikoreksi di poll?
+□ Apakah Satisfaction rating secara holistik konsisten dengan seluruh dimensi di atas?
+□ Apakah narasi dalam Bahasa Indonesia dan label form tetap Bahasa Inggris?
+□ Apakah seluruh output dibungkus di dalam tag <database> dan </database>?
+""",
 }
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -479,6 +498,7 @@ _TASK_DISPLAY_NAMES: dict[str, str] = {
     "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
     "CYU_ACTION_ITEMS": "CYU — Action Items",
     "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
+    "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
 }
 
 

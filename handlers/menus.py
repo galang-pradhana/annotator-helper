@@ -253,6 +253,7 @@ async def task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             [InlineKeyboardButton("🖋️ Writing Tool - Proofreading V2", callback_data="sub_WRITING_TOOL_PROOFREAD_V2")],
             [InlineKeyboardButton("🧠 PSR Personalized Smart Reply", callback_data="sub_TA_PERSONALIZED_SMART_REPLY")],
             [InlineKeyboardButton("📝 Writing QA", callback_data="sub_TA_WRITING_TOOLS_WRITING_QA")],
+            [InlineKeyboardButton("📊 Intelligent Polls", callback_data="sub_TA_INTELLIGENT_POLLS")],
             [InlineKeyboardButton("🔙 Kembali", callback_data="back_task")],
         ]
         await query.edit_message_text(
@@ -516,6 +517,17 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
             "Grading Summary per Response (Excellent/Good/Fair/Poor)",
             "Part III — Pairwise Comparison & Observasi Keseluruhan"
         ],
+        "TA_INTELLIGENT_POLLS": [
+            "Skip Check: Is the prompt/response valid to evaluate?",
+            "Proper No Reply: Should a poll be generated based on the conversation?",
+            "Following Instructions check",
+            "Composition: Is the text concise, natural, error-free, and coherent?",
+            "Comprehensiveness: Are all options included in the correct order?",
+            "Groundedness: Are the title and options derived only from the conversation?",
+            "Localization: Any local language or cultural issues?",
+            "Harmfulness: Does the poll contain any harmful content?",
+            "Satisfaction Rating & Pairwise Comparison"
+        ],
     }
 
     # Human-friendly task display names
@@ -538,6 +550,7 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
         "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
         "CYU_ACTION_ITEMS": "CYU — Action Items",
         "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
+        "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
     }
 
     q_list = QUESTIONS.get(task_code, QUESTIONS["PR"])
@@ -626,6 +639,7 @@ async def tier_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         "WRITING_TOOL_PROOFREAD_V2": "Writing Tool - Proofreading V2",
         "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
         "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
+        "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
     }
     main_task = context.user_data.get("SELECTED_TASK", "PR")
     sub_task = context.user_data.get("SELECTED_SUBTASK")

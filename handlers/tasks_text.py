@@ -115,7 +115,9 @@ async def next_to_resp_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     task_code = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
     first_input_name = "User Ask / Input Utama"
     
-    if "PROOFREAD_V2" in task_code or "CYU_WEBSITE" in task_code:
+    if "INTELLIGENT_POLLS" in task_code:
+        first_input_name = "Conversation"
+    elif "PROOFREAD_V2" in task_code or "CYU_WEBSITE" in task_code:
         first_input_name = "Original Input Text"
     elif "CYU_TOPLINE" in task_code or "CYU_ACTION_ITEMS" in task_code:
         first_input_name = "Instruction & Original Input Text"
@@ -156,7 +158,7 @@ async def next_to_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     # Deteksi task type dari subtask atau main task
     task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
-    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM"]
+    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM", "TA_INTELLIGENT_POLLS"]
 
     if task_type in optional_b_tasks:
         msg = (
@@ -186,7 +188,7 @@ async def collect_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def skip_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
-    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM"]
+    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM", "TA_INTELLIGENT_POLLS"]
 
     if task_type not in optional_b_tasks:
         await update.message.reply_text(
@@ -200,7 +202,7 @@ async def skip_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 async def next_to_resp_c(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
-    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM"]
+    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM", "TA_INTELLIGENT_POLLS"]
 
     if not context.user_data.get('temp_resp_b') and task_type not in optional_b_tasks:
         await update.message.reply_text(

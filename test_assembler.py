@@ -14,8 +14,15 @@ def test_prompt_assembler():
         # Test AFM task
         prompt_afm = assemble_evaluator_prompt("JA", "AFM")
         print(f"✅ AFM Prompt assembled successfully. Length: {len(prompt_afm)} chars.")
-        if "BLOCK D — OUTPUT CONTRACT" not in prompt_afm:
+        if "BLOCK D — TASK EXECUTION INSTRUCTIONS" not in prompt_afm:
             print("❌ BLOCK D is missing from AFM prompt.")
+            return False
+            
+        # Test TA_INTELLIGENT_POLLS task
+        prompt_polls = assemble_evaluator_prompt("ID", "TA_INTELLIGENT_POLLS")
+        print(f"✅ TA_INTELLIGENT_POLLS Prompt assembled successfully. Length: {len(prompt_polls)} chars.")
+        if "TA INTELLIGENT POLLS SELF-AUDIT" not in prompt_polls:
+            print("❌ SELF-AUDIT section is missing from TA_INTELLIGENT_POLLS prompt.")
             return False
             
         print("🎉 All tests passed!")

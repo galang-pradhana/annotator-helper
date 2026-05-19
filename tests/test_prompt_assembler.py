@@ -19,8 +19,8 @@ def test_assemble_evaluator_prompt_basic(mock_read):
     assert "Bahasa Indonesia" in prompt
     assert "id" in prompt
     assert "Mock Content" in prompt
-    # Ensure it called read_asset_file for each asset (guidelines, forms, prompts, inputs)
-    assert mock_read.call_count == 4
+    # Ensure it called read_asset_file for each asset (guidelines, prompts)
+    assert mock_read.call_count == 2
 
 @patch("prompt_assembler.read_asset_file")
 def test_assemble_evaluator_prompt_fallback_lang(mock_read):
@@ -42,10 +42,23 @@ def test_assemble_evaluator_prompt_different_task(mock_read):
     
     # Assert
     assert "Bahasa Indonesia" in prompt
-    assert mock_read.call_count == 4
+    assert mock_read.call_count == 2
 
 def test_asset_configs_structure():
     # Verify that all configs have the required keys
     required_keys = {"guidelines", "forms", "prompts", "inputs"}
     for task_code, config in ASSET_CONFIGS.items():
         assert required_keys.issubset(config.keys()), f"Task {task_code} is missing keys"
+
+@patch("prompt_assembler.read_asset_file")
+def test_assemble_evaluator_prompt_intelligent_polls(mock_read):
+    mock_read.return_value = "Mock Content"
+    
+    # Execute with TA_INTELLIGENT_POLLS task
+    prompt = assemble_evaluator_prompt("ID", "TA_INTELLIGENT_POLLS")
+    
+    # Assert
+    assert "SKEPTICAL SENIOR ANNOTATOR" in prompt
+    assert "Bahasa Indonesia" in prompt
+    assert "TA/TC — Intelligent Polls" in prompt
+    assert mock_read.call_count == 2

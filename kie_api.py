@@ -433,8 +433,8 @@ def _map_to_openrouter_model(kie_model_name: str, is_vision: bool = False) -> st
     if "flash" in model or "basic" in model:
         return "deepseek/deepseek-v4-flash"
         
-    # PRO/PREMIUM tier diarahkan ke DeepSeek V3.2 Speciale
-    return "deepseek/deepseek-v3.2-speciale"
+    # PRO/PREMIUM tier diarahkan ke DeepSeek V4 Pro
+    return "deepseek/deepseek-v4-pro"
 
 async def call_openrouter_api(system_prompt: str, user_input: str, model_name: str) -> str:
     api_key = _OR_API_KEY

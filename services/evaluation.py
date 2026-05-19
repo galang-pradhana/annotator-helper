@@ -142,6 +142,17 @@ def _format_user_input(
             payload += f"\n\nRESPONSE C:\n{resp_c}"
         return payload
 
+    # ── KHUSUS: TA_INTELLIGENT_POLLS ──────────────────────────────────────
+    if task_type == "TA_INTELLIGENT_POLLS":
+        payload = f"[CONVERSATION]\n{user_ask}\n\n[RESPONSE A]\n{resp_a}"
+        if resp_b:
+            payload += f"\n\n[RESPONSE B]\n{resp_b}"
+        else:
+            payload += "\n\n[Response B tidak disertakan — hanya 1 response yang dievaluasi]"
+        if resp_c:
+            payload += f"\n\n[RESPONSE C]\n{resp_c}"
+        return payload
+
     # ── DEFAULT: PR, TC, AFM, CYU website, dan lainnya ───────────────────
     # Berlaku juga untuk AFM (user_ask=User Input, resp_a=Response)
     payload = f"USER ASK:\n{user_ask}\n\nRESPONSE A:\n{resp_a}"

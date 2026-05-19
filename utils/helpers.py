@@ -192,10 +192,10 @@ def _parse_evaluation_input(text: str) -> tuple[str, str, str, str] | None:
 
     # Coba format 2: regex-based extraction
     patterns = {
-        "user_ask": r"(?i)(?:(?:Instruction|User\s*Ask|Original\s*(?:Input\s*)?Text|User\s*Input|User)\s*:\s*)([\s\S]*?)(?=Response\s*(?:A|:)|$)",
-        "resp_a": r"(?i)(?:Response\s*(?:A\s*)?:\s*)([\s\S]*?)(?=Response\s*B\s*:|$)",
-        "resp_b": r"(?i)(?:Response\s*B\s*:\s*)([\s\S]*?)(?=Response\s*C\s*:|$)",
-        "resp_c": r"(?i)(?:Response\s*C\s*:\s*)([\s\S]*?)$",
+        "user_ask": r"(?i)(?:(?:Instruction|User\s*Ask|Original\s*(?:Input\s*)?Text|User\s*Input|User|Conversation|\[CONVERSATION\])\s*:?\s*)([\s\S]*?)(?=Response\s*(?:A|:)|\[RESPONSE\s*A\]|$)",
+        "resp_a": r"(?i)(?:(?:Response\s*(?:A\s*)?|\[RESPONSE\s*A\])\s*:?\s*)([\s\S]*?)(?=Response\s*B\s*:|\[RESPONSE\s*B\]|$)",
+        "resp_b": r"(?i)(?:(?:Response\s*B\s*|\[RESPONSE\s*B\])\s*:?\s*)([\s\S]*?)(?=Response\s*C\s*:|\[RESPONSE\s*C\]|$)",
+        "resp_c": r"(?i)(?:(?:Response\s*C\s*|\[RESPONSE\s*C\])\s*:?\s*)([\s\S]*?)$",
     }
 
     user_ask = _regex_extract(text, patterns["user_ask"])
