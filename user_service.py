@@ -18,9 +18,13 @@ SIGNUP_BONUS = 500  # 500 Poin bonus saldo untuk user baru
 
 async def get_user_info(session: AsyncSession, tg_id: int) -> User | None:
     """Mengambil data user lengkap."""
-    statement = select(User).where(User.user_id == tg_id)
-    result = await session.execute(statement)
-    return result.scalar_one_or_none()
+    try:
+        statement = select(User).where(User.user_id == tg_id)
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
+    except Exception as e:
+        logger.error(f"Database error in get_user_info for {tg_id}: {e}")
+        return None
 
 
 async def register_or_get_user(
@@ -81,10 +85,14 @@ async def register_or_get_user(
 
 
 async def check_balance(session: AsyncSession, tg_id: int, price: int) -> bool:
-    user = await get_user_info(session, tg_id)
-    if not user:
+    try:
+        user = await get_user_info(session, tg_id)
+        if not user:
+            return False
+        return user.balance >= price
+    except Exception as e:
+        logger.error(f"Database error in check_balance for {tg_id}: {e}")
         return False
-    return user.balance >= price
 
 
 async def deduct_balance(
@@ -239,47 +247,63 @@ async def update_project(session: AsyncSession, tg_id: int, project_code: str) -
 
 async def get_projects(session: AsyncSession) -> list[Project]:
     """Mengambil semua proyek."""
-    statement = select(Project).order_by(Project.code)
-    result = await session.execute(statement)
-    return result.scalars().all()
+    try:
+        statement = select(Project).order_by(Project.code)
+        result = await session.execute(statement)
+        return result.scalars().all()
+    except Exception as e:
+        logger.error(f"Database error in get_projects: {e}")
+        return []
 
 
 async def get_tasks_by_project(session: AsyncSession, project_code: str) -> list[Task]:
     """Mengambil semua task dalam proyek tertentu."""
-    statement = select(Task).where(Task.project_code == project_code).order_by(Task.id)
-    result = await session.execute(statement)
-    return result.scalars().all()
+    try:
+        statement = select(Task).where(Task.project_code == project_code).order_by(Task.id)
+        result = await session.execute(statement)
+        return result.scalars().all()
+    except Exception as e:
+        logger.error(f"Database error in get_tasks_by_project for {project_code}: {e}")
+        return []
 
 
 async def get_stats(session: AsyncSession) -> dict:
     """
     Admin stats: total users, total saldo keseluruhan, dan total hits hari ini.
     """
-    # Total users
-    result = await session.execute(select(func.count(User.user_id)))
-    total_users = result.scalar_one_or_none() or 0
+    try:
+        # Total users
+        result = await session.execute(select(func.count(User.user_id)))
+        total_users = result.scalar_one_or_none() or 0
 
-    # Total balance
-    result = await session.execute(select(func.sum(User.balance)))
-    total_balance = result.scalar_one_or_none() or 0
+        # Total balance
+        result = await session.execute(select(func.sum(User.balance)))
+        total_balance = result.scalar_one_or_none() or 0
 
-    # Hits today (deductions)
-    today_start = datetime.now(timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    result = await session.execute(
-        select(func.count(Transaction.id)).where(
-            Transaction.type == "deduction",
-            Transaction.timestamp >= today_start,
+        # Hits today (deductions)
+        today_start = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
         )
-    )
-    hits_today = result.scalar_one_or_none() or 0
+        result = await session.execute(
+            select(func.count(Transaction.id)).where(
+                Transaction.type == "deduction",
+                Transaction.timestamp >= today_start,
+            )
+        )
+        hits_today = result.scalar_one_or_none() or 0
 
-    return {
-        "total_users": total_users,
-        "total_balance": total_balance,
-        "hits_today": hits_today,
-    }
+        return {
+            "total_users": total_users,
+            "total_balance": total_balance,
+            "hits_today": hits_today,
+        }
+    except Exception as e:
+        logger.error(f"Database error in get_stats: {e}")
+        return {
+            "total_users": 0,
+            "total_balance": 0,
+            "hits_today": 0,
+        }
 
 
 # ── EVALUATION & HISTORY FUNCTIONS ────────────────────────────────────────
@@ -327,14 +351,18 @@ async def add_evaluation(
 
 async def get_user_history(session: AsyncSession, user_id: int) -> list[Evaluation]:
     """Ambil 5 history terakhir user."""
-    statement = (
-        select(Evaluation)
-        .where(Evaluation.user_id == user_id)
-        .order_by(Evaluation.timestamp.desc())
-        .limit(5)
-    )
-    result = await session.execute(statement)
-    return list(result.scalars().all())
+    try:
+        statement = (
+            select(Evaluation)
+            .where(Evaluation.user_id == user_id)
+            .order_by(Evaluation.timestamp.desc())
+            .limit(5)
+        )
+        result = await session.execute(statement)
+        return list(result.scalars().all())
+    except Exception as e:
+        logger.error(f"Database error in get_user_history for {user_id}: {e}")
+        return []
 
 
 async def get_eval_by_id(session: AsyncSession, eval_id: int) -> Evaluation | None:
@@ -363,18 +391,26 @@ async def update_evaluation_feedback(session: AsyncSession, eval_id: int, feedba
 
 async def get_recent_fails(session: AsyncSession) -> list[Evaluation]:
     """Admin: Ambil 5 evaluasi terakhir dengan feedback 'negative'."""
-    statement = (
-        select(Evaluation)
-        .where(Evaluation.feedback == "negative")
-        .order_by(Evaluation.timestamp.desc())
-        .limit(5)
-    )
-    result = await session.execute(statement)
-    return list(result.scalars().all())
+    try:
+        statement = (
+            select(Evaluation)
+            .where(Evaluation.feedback == "negative")
+            .order_by(Evaluation.timestamp.desc())
+            .limit(5)
+        )
+        result = await session.execute(statement)
+        return list(result.scalars().all())
+    except Exception as e:
+        logger.error(f"Database error in get_recent_fails: {e}")
+        return []
 
 
 async def get_all_user_ids(session: AsyncSession) -> list[int]:
     """Ambil semua ID user untuk broadcast."""
-    statement = select(User.user_id)
-    result = await session.execute(statement)
-    return list(result.scalars().all())
+    try:
+        statement = select(User.user_id)
+        result = await session.execute(statement)
+        return list(result.scalars().all())
+    except Exception as e:
+        logger.error(f"Database error in get_all_user_ids: {e}")
+        return []

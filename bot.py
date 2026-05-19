@@ -240,15 +240,42 @@ from handlers.admin import (
 # ══════════════════════════════════════════════════════════════════════════
 
 async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Log the error and handle specific telegram.error exceptions."""
-    from telegram.error import BadRequest
+    """Log the error and handle specific telegram.error exceptions gracefully."""
+    from telegram.error import BadRequest, Forbidden, NetworkError
     
+    # Abaikan error tidak berbahaya
     if isinstance(context.error, BadRequest):
         if "Message is not modified" in str(context.error):
             logger.debug("Ignored BadRequest: Message is not modified")
             return
             
     logger.error("Exception while handling an update:", exc_info=context.error)
+    
+    if isinstance(update, Update):
+        # Reset rate limit jika terjadi error agar user tidak tersangkut limit
+        if context.user_data:
+            context.user_data.pop("last_request_time", None)
+            
+        friendly_text = (
+            "⚠️ **Terjadi Kesalahan Sistem** 🚦\n\n"
+            "Mohon maaf, sistem mengalami gangguan teknis tidak terduga saat memproses perintah Anda.\n\n"
+            "**Solusi:**\n"
+            "1. Ketik /start untuk memuat ulang percakapan.\n"
+            "2. Jika terus berlanjut, hubungi Admin."
+        )
+        
+        try:
+            if update.callback_query:
+                # Answer callback agar UI tidak loading terus
+                try:
+                    await update.callback_query.answer("⚠️ Terjadi kesalahan internal.", show_alert=True)
+                except Exception:
+                    pass
+                await update.callback_query.edit_message_text(friendly_text, parse_mode="Markdown")
+            elif update.effective_message:
+                await update.effective_message.reply_text(friendly_text, parse_mode="Markdown")
+        except Exception as e:
+            logger.error(f"Gagal mengirimkan pesan error ramah ke pengguna: {e}")
 
 async def post_init(application: Application) -> None:
     """Inisialisasi database di dalam event loop bot."""

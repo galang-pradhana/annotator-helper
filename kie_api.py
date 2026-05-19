@@ -220,10 +220,7 @@ async def _call_kie_ai_internal(
 
                 # Format tidak dikenali
                 logger.warning(f"Unexpected Kie.ai response format: {list(data.keys())}")
-                return (
-                    f"⚠️ Format respons API tidak dikenali:\n"
-                    f"```json\n{str(data)[:500]}\n```"
-                )
+                return "❌ **Respons AI Tidak Valid** 🚦\n\nServer berhasil merespons tetapi format data tidak dapat dibaca. Silakan coba lagi beberapa saat."
 
         except httpx.TimeoutException:
             logger.error(f"[{attempt}] Kie.ai API timeout after {timeout}s")
@@ -235,10 +232,7 @@ async def _call_kie_ai_internal(
 
         except httpx.HTTPStatusError as e:
             logger.error(f"[{attempt}] HTTP Status Error: {e.response.status_code}")
-            return (
-                f"❌ **HTTP Error {e.response.status_code}**\n"
-                f"```\n{e.response.text[:500]}\n```"
-            )
+            return "❌ **Sistem AI Sedang Sibuk / Kelebihan Beban** 🚦\n\nSaat ini server tujuan sedang memproses terlalu banyak antrean atau mendeteksi teks yang terlalu panjang.\n\n**Solusi:**\n1. Tunggu 1-2 menit dan coba kirim ulang.\n2. Pertimbangkan untuk menggunakan *AI Tier PRO*."
 
         except Exception as e:
             logger.error(f"[{attempt}] Unexpected error: {type(e).__name__}: {e}")
@@ -246,7 +240,7 @@ async def _call_kie_ai_internal(
             if attempt < MAX_RETRIES:
                 await asyncio.sleep(RETRY_DELAY * attempt)
                 continue
-            return f"❌ **Error** — {type(e).__name__}: {e}"
+            return "❌ **Sistem AI Tidak Dapat Dihubungi** 🚦\n\nKoneksi ke server AI terputus. Silakan tunggu beberapa menit dan coba lagi."
 
     # Semua retry habis - Fallback to OpenRouter
     return f"❌ **Kie.ai Error**: Semua percobaan gagal. {last_error_msg}. Silakan gunakan /switch openrouter."
@@ -400,10 +394,7 @@ async def _call_kie_ai_internal_multimodal(
                     return llm_reply
 
                 logger.warning(f"VCG unexpected response format: {list(data.keys())}")
-                return (
-                    f"⚠️ Format respons API tidak dikenali:\n"
-                    f"```json\n{str(data)[:500]}\n```"
-                )
+                return "❌ **Respons AI Tidak Valid** 🚦\n\nServer berhasil merespons tetapi format data tidak dapat dibaca. Silakan coba lagi beberapa saat."
 
         except httpx.TimeoutException:
             logger.error(f"[VCG-{attempt}] Timeout after {timeout}s")
@@ -419,7 +410,7 @@ async def _call_kie_ai_internal_multimodal(
             if attempt < MAX_RETRIES:
                 await asyncio.sleep(RETRY_DELAY * attempt)
                 continue
-            return f"❌ **Error** — {type(e).__name__}: {e}"
+            return "❌ **Sistem AI Tidak Dapat Dihubungi** 🚦\n\nKoneksi ke server AI terputus. Silakan tunggu beberapa menit dan coba lagi."
 
     # Semua retry habis - Fallback to OpenRouter
     logger.warning(f"VCG All retries exhausted for Kie.ai. Fallback to OpenRouter... Last error: {last_error_msg}")
@@ -473,21 +464,42 @@ async def call_openrouter_api(system_prompt: str, user_input: str, model_name: s
     
     logger.info(f"🔄 FALLBACK TO OPENROUTER | MODEL: {or_model} | PROMPT: {len(system_prompt)} chars")
     
-    try:
-        async with _LLM_SEMAPHORE, httpx.AsyncClient(timeout=120) as client:
-            response = await client.post(endpoint, json=payload, headers=headers)
-            if response.status_code != 200:
-                return f"❌ **OpenRouter Error {response.status_code}**\n```\n{response.text[:500]}\n```"
+    last_error_msg = ""
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            async with _LLM_SEMAPHORE, httpx.AsyncClient(timeout=120) as client:
+                response = await client.post(endpoint, json=payload, headers=headers)
+                if response.status_code != 200:
+                    raw = response.text[:500]
+                    logger.error(f"[OpenRouter-{attempt}] Error {response.status_code}: {raw}")
+                    last_error_msg = f"HTTP {response.status_code}"
+                    if attempt < MAX_RETRIES:
+                        await asyncio.sleep(RETRY_DELAY * attempt)
+                        continue
+                    return "❌ **Sistem AI Sedang Sibuk / Kelebihan Beban** 🚦\n\nSaat ini server tujuan sedang memproses terlalu banyak antrean atau mendeteksi teks yang terlalu panjang.\n\n**Solusi:**\n1. Tunggu 1-2 menit dan coba kirim ulang.\n2. Pertimbangkan untuk menggunakan *AI Tier PRO*."
+                    
+                data = response.json()
+                choices = data.get("choices", [])
+                if choices:
+                    reply = choices[0].get("message", {}).get("content") or ""
+                    logger.info(f"✅ [OpenRouter] Response OK | {len(reply)} chars")
+                    return reply
                 
-            data = response.json()
-            choices = data.get("choices", [])
-            if choices:
-                reply = choices[0].get("message", {}).get("content") or ""
-                logger.info(f"✅ [OpenRouter] Response OK | {len(reply)} chars")
-                return reply
-            return f"⚠️ Format OpenRouter API tidak dikenali:\n```json\n{str(data)[:500]}\n```"
-    except Exception as e:
-        return f"❌ **OpenRouter Exception** — {type(e).__name__}: {e}"
+                logger.error(f"[OpenRouter-{attempt}] Format API tidak dikenali: {str(data)[:500]}")
+                last_error_msg = "Format respons tidak valid"
+                if attempt < MAX_RETRIES:
+                    await asyncio.sleep(RETRY_DELAY * attempt)
+                    continue
+                return "❌ **Respons AI Tidak Valid** 🚦\n\nServer berhasil merespons tetapi format data tidak dapat dibaca. Silakan coba lagi beberapa saat."
+        except Exception as e:
+            logger.error(f"[OpenRouter-{attempt}] Exception: {type(e).__name__}: {e}")
+            last_error_msg = f"{type(e).__name__}: {e}"
+            if attempt < MAX_RETRIES:
+                await asyncio.sleep(RETRY_DELAY * attempt)
+                continue
+            return "❌ **Sistem AI Tidak Dapat Dihubungi** 🚦\n\nKoneksi ke server AI terputus. Silakan tunggu beberapa menit dan coba lagi."
+            
+    return f"❌ **OpenRouter Error**: Semua percobaan gagal. {last_error_msg}."
 
 
 async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, images_b64: dict, model_name: str) -> str:
@@ -528,21 +540,42 @@ async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, ima
     
     logger.info(f"🔄 VCG FALLBACK TO OPENROUTER | MODEL: {or_model} | IMAGES: {list(images_b64.keys())}")
     
-    try:
-        async with _LLM_SEMAPHORE, httpx.AsyncClient(timeout=180) as client:
-            response = await client.post(endpoint, json=payload, headers=headers)
-            if response.status_code != 200:
-                return f"❌ **OpenRouter Error {response.status_code}**\n```\n{response.text[:500]}\n```"
+    last_error_msg = ""
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            async with _LLM_SEMAPHORE, httpx.AsyncClient(timeout=180) as client:
+                response = await client.post(endpoint, json=payload, headers=headers)
+                if response.status_code != 200:
+                    raw = response.text[:500]
+                    logger.error(f"[OpenRouterVCG-{attempt}] Error {response.status_code}: {raw}")
+                    last_error_msg = f"HTTP {response.status_code}"
+                    if attempt < MAX_RETRIES:
+                        await asyncio.sleep(RETRY_DELAY * attempt)
+                        continue
+                    return "❌ **Sistem AI Sedang Sibuk / Kelebihan Beban** 🚦\n\nSaat ini server tujuan sedang memproses terlalu banyak antrean atau mendeteksi ukuran file yang terlalu besar.\n\n**Solusi:**\n1. Tunggu 1-2 menit dan coba kirim ulang.\n2. Pertimbangkan untuk menggunakan *AI Tier PRO*."
+                    
+                data = response.json()
+                choices = data.get("choices", [])
+                if choices:
+                    reply = choices[0].get("message", {}).get("content") or ""
+                    logger.info(f"✅ [VCG/OpenRouter] Response OK | {len(reply)} chars")
+                    return reply
                 
-            data = response.json()
-            choices = data.get("choices", [])
-            if choices:
-                reply = choices[0].get("message", {}).get("content") or ""
-                logger.info(f"✅ [VCG/OpenRouter] Response OK | {len(reply)} chars")
-                return reply
-            return f"⚠️ Format OpenRouter API tidak dikenali:\n```json\n{str(data)[:500]}\n```"
-    except Exception as e:
-        return f"❌ **OpenRouter Exception** — {type(e).__name__}: {e}"
+                logger.error(f"[OpenRouterVCG-{attempt}] Format API tidak dikenali: {str(data)[:500]}")
+                last_error_msg = "Format respons tidak valid"
+                if attempt < MAX_RETRIES:
+                    await asyncio.sleep(RETRY_DELAY * attempt)
+                    continue
+                return "❌ **Respons AI Tidak Valid** 🚦\n\nServer berhasil merespons tetapi format data tidak dapat dibaca. Silakan coba lagi beberapa saat."
+        except Exception as e:
+            logger.error(f"[OpenRouterVCG-{attempt}] Exception: {type(e).__name__}: {e}")
+            last_error_msg = f"{type(e).__name__}: {e}"
+            if attempt < MAX_RETRIES:
+                await asyncio.sleep(RETRY_DELAY * attempt)
+                continue
+            return "❌ **Sistem AI Tidak Dapat Dihubungi** 🚦\n\nKoneksi ke server AI terputus. Silakan tunggu beberapa menit dan coba lagi."
+            
+    return f"❌ **OpenRouter VCG Error**: Semua percobaan gagal. {last_error_msg}."
 
 # ── Router & Status ────────────────────────────────────────────────────────────
 
