@@ -482,7 +482,7 @@ async def call_openrouter_api(system_prompt: str, user_input: str, model_name: s
             data = response.json()
             choices = data.get("choices", [])
             if choices:
-                reply = choices[0].get("message", {}).get("content", "")
+                reply = choices[0].get("message", {}).get("content") or ""
                 logger.info(f"✅ [OpenRouter] Response OK | {len(reply)} chars")
                 return reply
             return f"⚠️ Format OpenRouter API tidak dikenali:\n```json\n{str(data)[:500]}\n```"
@@ -537,7 +537,7 @@ async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, ima
             data = response.json()
             choices = data.get("choices", [])
             if choices:
-                reply = choices[0].get("message", {}).get("content", "")
+                reply = choices[0].get("message", {}).get("content") or ""
                 logger.info(f"✅ [VCG/OpenRouter] Response OK | {len(reply)} chars")
                 return reply
             return f"⚠️ Format OpenRouter API tidak dikenali:\n```json\n{str(data)[:500]}\n```"
