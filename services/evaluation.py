@@ -8,7 +8,7 @@ from core.config import TIER_MODELS, READY, TIER_DISPLAY_LABELS
 from database import get_session
 import user_service
 from prompt_assembler import assemble_evaluator_prompt
-from kie_api import call_ai_engine
+from kie_api import call_ai_engine, call_ai_engine_multimodal
 from utils.helpers import send_large_message
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,48 @@ def _calculate_dynamic_price(tier: str, content_len: int = 2000) -> int:
             return random.randint(90, 105)
         else:
             return random.randint(105, 120)
+
+
+def _build_result_ui(
+    tier: str,
+    price: int,
+    remaining: int,
+    eval_id: int,
+    is_vcg: bool = False,
+) -> tuple:
+    """Membangun disclaimer, footer, dan reply_markup untuk hasil evaluasi.
+
+    Dipanggil oleh _run_evaluation_background() dan _run_vcg_evaluation_background()
+    untuk menghindari duplikasi kode yang identik.
+    """
+    tier_label = TIER_DISPLAY_LABELS.get(tier, tier)
+    label = "Evaluasi VCG Selesai!" if is_vcg else "Evaluasi Selesai!"
+    next_hint = "ganti task." if is_vcg else "ganti task/proyek."
+
+    disclaimer_html = (
+        "⚠️ <b>PERINGATAN</b>: <i>Tugas AI hanya membantu. Harap telaah kembali hasil evaluasi ini "
+        "dengan cermat (Critical Thinking required).</i>\n"
+        "──────────────────\n"
+    )
+    footer_html = (
+        f"──────────────────\n"
+        f"✅ <b>{label}</b>\n"
+        f"🤖 AI Tier: <b>{tier_label}</b>\n"
+        f"💰 Biaya: <b>{price} Poin</b>\n"
+        f"💳 Sisa Saldo: <b>{remaining:,} Poin</b>\n"
+        f"──────────────────\n"
+        f"💡 Ketik <b>/mulai</b> untuk lanjut, atau <b>/cancel</b> untuk {next_hint}\n"
+    )
+
+    reply_markup = None
+    if eval_id:
+        kb = [[
+            InlineKeyboardButton("👍 Akurat", callback_data=f"feed_pos_{eval_id}"),
+            InlineKeyboardButton("👎 Kurang", callback_data=f"feed_neg_{eval_id}"),
+        ]]
+        reply_markup = InlineKeyboardMarkup(kb)
+
+    return disclaimer_html, footer_html, reply_markup
 
 def _extract_database_content(text: str) -> str:
     """
@@ -210,38 +252,13 @@ async def _run_evaluation_background(
 
     # 5. Kirim hasil akhir ke user
     await status_msg.delete()
-    
-    disclaimer_html = (
-        "⚠️ <b>PENGINGAT</b>: <i>Tugas AI hanya membantu. Harap telaah kembali hasil evaluasi ini "
-        "dengan cermat (Critical Thinking required).</i>\n"
-        "──────────────────\n"
-    )
-    
-    tier_label = TIER_DISPLAY_LABELS.get(tier, tier)
-    footer_html = (
-        f"──────────────────\n"
-        f"✅ <b>Evaluasi Selesai!</b>\n"
-        f"🤖 AI Tier: <b>{tier_label}</b>\n"
-        f"💰 Biaya: <b>{price} Poin</b>\n"
-        f"💳 Sisa Saldo: <b>{remaining:,} Poin</b>\n"
-        f"──────────────────\n"
-        f"💡 Ketik <b>/mulai</b> untuk lanjut, atau <b>/cancel</b> untuk ganti task/proyek.\n"
-    )
-    
-    # Tombol Feedback
-    reply_markup = None
-    if eval_id:
-        kb = [[
-            InlineKeyboardButton("👍 Akurat", callback_data=f"feed_pos_{eval_id}"),
-            InlineKeyboardButton("👎 Kurang", callback_data=f"feed_neg_{eval_id}"),
-        ]]
-        reply_markup = InlineKeyboardMarkup(kb)
+    disclaimer_html, footer_html, reply_markup = _build_result_ui(tier, price, remaining, eval_id)
 
     await send_large_message(
-        update, 
-        llm_response, 
-        disclaimer=disclaimer_html, 
-        footer=footer_html, 
+        update,
+        llm_response,
+        disclaimer=disclaimer_html,
+        footer=footer_html,
         reply_markup=reply_markup
     )
 
@@ -253,8 +270,7 @@ async def _run_evaluation_background(
             parse_mode="Markdown"
         )
 
-    return READY
-from kie_api import call_ai_engine_multimodal
+
 
 async def _run_vcg_evaluation_background(
     update: Update,
@@ -379,37 +395,13 @@ async def _run_vcg_evaluation_background(
         remaining = 0
 
     await status_msg.delete()
-
-    disclaimer_html = (
-        "⚠️ <b>PENGINGAT</b>: <i>Tugas AI hanya membantu. Harap telaah kembali hasil evaluasi ini "
-        "dengan cermat (Critical Thinking required).</i>\n"
-        "──────────────────\n"
-    )
-    tier_label = TIER_DISPLAY_LABELS.get(tier, tier)
-    footer_html = (
-        f"──────────────────\n"
-        f"✅ <b>Evaluasi VCG Selesai!</b>\n"
-        f"🤖 AI Tier: <b>{tier_label}</b>\n"
-        f"💰 Biaya: <b>{price} Poin</b>\n"
-        f"💳 Sisa Saldo: <b>{remaining:,} Poin</b>\n"
-        f"──────────────────\n"
-        f"💡 Ketik <b>/mulai</b> untuk lanjut, atau <b>/cancel</b> untuk ganti task."
-    )
-
-    # Tombol Feedback
-    reply_markup = None
-    if eval_id:
-        kb = [[
-            InlineKeyboardButton("👍 Akurat", callback_data=f"feed_pos_{eval_id}"),
-            InlineKeyboardButton("👎 Kurang", callback_data=f"feed_neg_{eval_id}"),
-        ]]
-        reply_markup = InlineKeyboardMarkup(kb)
+    disclaimer_html, footer_html, reply_markup = _build_result_ui(tier, price, remaining, eval_id, is_vcg=True)
 
     await send_large_message(
-        update, 
-        llm_response, 
-        disclaimer=disclaimer_html, 
-        footer=footer_html, 
+        update,
+        llm_response,
+        disclaimer=disclaimer_html,
+        footer=footer_html,
         reply_markup=reply_markup
     )
 

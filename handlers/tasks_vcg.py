@@ -1,12 +1,17 @@
 import os
 import logging
+import base64
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
 from database import get_session
 import user_service
 from services.evaluation import _calculate_dynamic_price, _run_evaluation_background, _run_vcg_evaluation_background
 from utils.helpers import send_large_message, _split_message
-from core.config import *
+from core.config import (
+    COLLECTING_VCG_PROMPT, COLLECTING_VCG_IMAGE_A, COLLECTING_VCG_IMAGE_B,
+    COLLECTING_VCG_IMAGE_C, COLLECTING_VCG_IMAGE_D,
+    READY,
+)
 logger = logging.getLogger(__name__)
 
 async def collect_vcg_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -277,7 +282,6 @@ async def process_vcg_images(
             if fid:
                 tg_file = await bot_instance.get_file(fid)
                 img_bytes = await tg_file.download_as_bytearray()
-                import base64
                 images_b64[label] = base64.b64encode(bytes(img_bytes)).decode("utf-8")
     except Exception as e:
         logger.error(f"VCG image download error: {e}")
@@ -294,8 +298,9 @@ async def process_vcg_images(
         "📦 Merakit system prompt..."
     )
 
-    # Lempar ke background task
-    asyncio.create_task(
+    # CONC-1 FIX: context.application.create_task() agar PTB bisa track dan
+    # gracefully shutdown task ini. asyncio.create_task() tidak di-track PTB.
+    context.application.create_task(
         _run_vcg_evaluation_background(
             update, tg_id, lang_code, tier, final_task, status_msg,
             user_prompt, images_b64,

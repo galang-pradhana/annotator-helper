@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
@@ -7,6 +8,7 @@ import user_service
 from services.evaluation import _calculate_dynamic_price, _run_evaluation_background, _run_vcg_evaluation_background
 from utils.helpers import send_large_message, _split_message
 from core.config import *
+from prompt_assembler import LANGUAGE_MAP
 logger = logging.getLogger(__name__)
 
 async def mulai_outside_ready(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -948,9 +950,9 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             "📥 **Langkah 1**: Kirim **User Ask** / **Input Utama**.\n"
             "Setelah selesai, ketik **/next**."
         )
-    await update.message.reply_text(msg, parse_mode="Markdown")
-    context.user_data['in_evaluation'] = True
-    return COLLECTING_USER_ASK
+        await update.message.reply_text(msg, parse_mode="Markdown")
+        context.user_data['in_evaluation'] = True
+        return COLLECTING_USER_ASK
 
 
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

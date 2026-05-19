@@ -6,6 +6,17 @@ from telegram import Update, InlineKeyboardMarkup
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_html(t: str) -> str:
+    """Konversi teks ke HTML-safe dengan Markdown dasar (bold, code, bullet)."""
+    if not t:
+        return ""
+    t = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    t = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', t, flags=re.DOTALL)
+    t = re.sub(r'`(.*?)`', r'<code>\1</code>', t)
+    t = re.sub(r'(?m)^\* ', r'• ', t)
+    return t
+
 def _split_message(text: str, chunk_size: int = 3500) -> list:
     """Memecah teks panjang berdasarkan newline terdekat."""
     if len(text) <= chunk_size:
@@ -42,16 +53,6 @@ async def send_large_message(
     2. Jika > 3800 karakter, JANGAN pecah-pecah pesan (menghindari FloodWait & pemotongan tag).
        Kirim langsung sebagai file Document (.txt/.md) lengkap.
     """
-    import re
-    def safe_html(t: str) -> str:
-        if not t:
-            return ""
-        t = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        t = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', t, flags=re.DOTALL)
-        t = re.sub(r'`(.*?)`', r'<code>\1</code>', t)
-        t = re.sub(r'(?m)^\* ', r'• ', t)
-        return t
-
     text = text.strip()
     if text.startswith("```"):
         text = re.sub(r"^```(?:[a-zA-Z]*)\n?", "", text, count=1)
@@ -64,7 +65,7 @@ async def send_large_message(
         logger.error("Tidak dapat menemukan message handle untuk mengirim respons.")
         return
 
-    content_html = safe_html(text)
+    content_html = _safe_html(text)
     
     full_html = ""
     if disclaimer:

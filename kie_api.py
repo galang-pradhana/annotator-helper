@@ -23,6 +23,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ── Module-level cached config (loaded once at startup) ───────────────────────
+_KIE_API_URL       = os.environ.get("KIE_API_URL", "")
+_KIE_API_KEY       = os.environ.get("KIE_API_KEY") or os.environ.get("KIE_AI_API_KEY", "")
+_KIE_DEFAULT_MODEL = os.environ.get("KIE_MODEL", "gemini-3.1-pro")
+_KIE_TIMEOUT       = int(os.environ.get("KIE_TIMEOUT", "120"))
+_KIE_VCG_TIMEOUT   = int(os.environ.get("KIE_VCG_TIMEOUT", "180"))
+_OR_API_KEY        = os.environ.get("OPENROUTER_API_KEY", "").strip()
+
+# ── Concurrency limiter: max 10 simultaneous LLM API calls ────────────────
+# Mencegah thundering-herd jika banyak user submit evaluasi bersamaan.
+# Adjust nilai ini sesuai kapasitas server LLM kamu.
+_LLM_SEMAPHORE = asyncio.Semaphore(10)
+
 logger = logging.getLogger(__name__)
 
 # ── Retry Config ──────────────────────────────────────────────────────────────
@@ -39,6 +52,23 @@ def _is_maintenance_error(msg: str) -> bool:
     ]
     msg_lower = (msg or "").lower()
     return any(kw in msg_lower for kw in maintenance_keywords)
+
+
+def _extract_llm_reply(data: dict, is_claude: bool) -> str:
+    """Ekstrak teks reply dari response JSON Claude (Anthropic) atau Gemini (OpenAI format)."""
+    if is_claude:
+        content = data.get("content", [])
+        if isinstance(content, list) and content:
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    return item.get("text", "")
+            # Fallback: ambil item pertama
+            item = content[0]
+            return item.get("text", str(item)) if isinstance(item, dict) else str(item)
+        return content if isinstance(content, str) else ""
+    else:
+        choices = data.get("choices", [])
+        return choices[0].get("message", {}).get("content", "") if choices else ""
 
 
 async def _call_kie_ai_internal(
@@ -58,10 +88,10 @@ async def _call_kie_ai_internal(
         String respons dari LLM, atau pesan error dengan prefix ❌/⚠️.
     """
 
-    api_url   = os.environ.get("KIE_API_URL", "")
-    api_key   = os.environ.get("KIE_API_KEY") or os.environ.get("KIE_AI_API_KEY", "")
-    model_name = model_override or os.environ.get("KIE_MODEL", "gemini-3.1-pro")
-    timeout   = int(os.environ.get("KIE_TIMEOUT", "120"))
+    api_url    = _KIE_API_URL
+    api_key    = _KIE_API_KEY
+    model_name = model_override or _KIE_DEFAULT_MODEL
+    timeout    = _KIE_TIMEOUT
 
     # ── Fallback DUMMY jika API belum diset ──────────────────────────────────
     if not api_url or not api_key:
@@ -124,7 +154,7 @@ async def _call_kie_ai_internal(
     last_error_msg = ""
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            async with _LLM_SEMAPHORE, httpx.AsyncClient(timeout=timeout) as client:
                 logger.info(f"Attempt {attempt}/{MAX_RETRIES} → {target_endpoint}")
                 response = await client.post(target_endpoint, json=payload, headers=headers)
 
@@ -178,31 +208,7 @@ async def _call_kie_ai_internal(
                             return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
 
                 # ── Extract LLM reply ────────────────────────────────────────
-                llm_reply = ""
-
-                if is_claude:
-                    # Anthropic format: data["content"][0]["text"]
-                    content = data.get("content", [])
-                    if isinstance(content, list) and content:
-                        for item in content:
-                            # Skip thinking blocks, ambil text blocks saja
-                            if isinstance(item, dict) and item.get("type") == "text":
-                                llm_reply = item.get("text", "")
-                                break
-                        if not llm_reply:
-                            # Fallback: ambil apapun dari item pertama
-                            item = content[0]
-                            if isinstance(item, dict):
-                                llm_reply = item.get("text", str(item))
-                            else:
-                                llm_reply = str(item)
-                    elif isinstance(content, str):
-                        llm_reply = content
-                else:
-                    # OpenAI format: data["choices"][0]["message"]["content"]
-                    choices = data.get("choices", [])
-                    if choices:
-                        llm_reply = choices[0].get("message", {}).get("content", "")
+                llm_reply = _extract_llm_reply(data, is_claude)
 
                 if llm_reply:
                     credits = data.get("credits_consumed", "?")
@@ -265,10 +271,10 @@ async def _call_kie_ai_internal_multimodal(
     Returns:
         String respons dari LLM.
     """
-    api_url    = os.environ.get("KIE_API_URL", "")
-    api_key    = os.environ.get("KIE_API_KEY") or os.environ.get("KIE_AI_API_KEY", "")
-    model_name = model_override or os.environ.get("KIE_MODEL", "gemini-3.1-pro")
-    timeout    = int(os.environ.get("KIE_TIMEOUT", "180"))
+    api_url    = _KIE_API_URL
+    api_key    = _KIE_API_KEY
+    model_name = model_override or _KIE_DEFAULT_MODEL
+    timeout    = _KIE_VCG_TIMEOUT
 
     # ── Fallback DUMMY ────────────────────────────────────────────────────────
     if not api_url or not api_key:
@@ -347,7 +353,7 @@ async def _call_kie_ai_internal_multimodal(
     last_error_msg = ""
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            async with _LLM_SEMAPHORE, httpx.AsyncClient(timeout=timeout) as client:
                 logger.info(f"VCG Attempt {attempt}/{MAX_RETRIES}")
                 response = await client.post(target_endpoint, json=payload, headers=headers)
 
@@ -387,23 +393,7 @@ async def _call_kie_ai_internal_multimodal(
                             
                         return f"❌ **Kie.ai Error**: Server sedang bermasalah atau maintenance. Silakan gunakan /switch openrouter."
 
-                llm_reply = ""
-                if is_claude:
-                    content = data.get("content", [])
-                    if isinstance(content, list) and content:
-                        for item in content:
-                            if isinstance(item, dict) and item.get("type") == "text":
-                                llm_reply = item.get("text", "")
-                                break
-                        if not llm_reply:
-                            item = content[0]
-                            llm_reply = item.get("text", str(item)) if isinstance(item, dict) else str(item)
-                    elif isinstance(content, str):
-                        llm_reply = content
-                else:
-                    choices = data.get("choices", [])
-                    if choices:
-                        llm_reply = choices[0].get("message", {}).get("content", "")
+                llm_reply = _extract_llm_reply(data, is_claude)
 
                 if llm_reply:
                     logger.info(f"✅ [VCG/{model_name}] Response OK | {len(llm_reply)} chars")
@@ -456,7 +446,7 @@ def _map_to_openrouter_model(kie_model_name: str, is_vision: bool = False) -> st
     return "deepseek/deepseek-v3.2-speciale"
 
 async def call_openrouter_api(system_prompt: str, user_input: str, model_name: str) -> str:
-    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    api_key = _OR_API_KEY
     if not api_key:
         return "❌ **OpenRouter API Key tidak ditemukan di .env**"
         
@@ -484,7 +474,7 @@ async def call_openrouter_api(system_prompt: str, user_input: str, model_name: s
     logger.info(f"🔄 FALLBACK TO OPENROUTER | MODEL: {or_model} | PROMPT: {len(system_prompt)} chars")
     
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with _LLM_SEMAPHORE, httpx.AsyncClient(timeout=120) as client:
             response = await client.post(endpoint, json=payload, headers=headers)
             if response.status_code != 200:
                 return f"❌ **OpenRouter Error {response.status_code}**\n```\n{response.text[:500]}\n```"
@@ -501,7 +491,7 @@ async def call_openrouter_api(system_prompt: str, user_input: str, model_name: s
 
 
 async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, images_b64: dict, model_name: str) -> str:
-    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    api_key = _OR_API_KEY
     if not api_key:
         return "❌ **OpenRouter API Key tidak ditemukan di .env**"
         
@@ -539,7 +529,7 @@ async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, ima
     logger.info(f"🔄 VCG FALLBACK TO OPENROUTER | MODEL: {or_model} | IMAGES: {list(images_b64.keys())}")
     
     try:
-        async with httpx.AsyncClient(timeout=180) as client:
+        async with _LLM_SEMAPHORE, httpx.AsyncClient(timeout=180) as client:
             response = await client.post(endpoint, json=payload, headers=headers)
             if response.status_code != 200:
                 return f"❌ **OpenRouter Error {response.status_code}**\n```\n{response.text[:500]}\n```"

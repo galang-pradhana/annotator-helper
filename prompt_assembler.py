@@ -19,6 +19,7 @@ Cara migrasi:
 
 import os
 import logging
+import functools
 
 logger = logging.getLogger(__name__)
 
@@ -461,43 +462,53 @@ Task: {task_display_name} | Language: {lang_name} ({iso_code})
 # UTILITY FUNCTIONS
 # ══════════════════════════════════════════════════════════════════════════
 
+# Mapping task_code → display name (module-level, dibuat sekali saat import)
+_TASK_DISPLAY_NAMES: dict[str, str] = {
+    "PR": "PR Fine Tuning — Preference Ranking",
+    "AFM": "AFM — Safety Guide (Multi Modal)",
+    "TC_MESSAGE_REPLY": "Text Composition — TC Message Reply",
+    "TC_PROOFREADING": "Text Composition — TC Proofreading",
+    "CYU_WEBSITE_TOPIC": "CYU — Website Topic Identification",
+    "CYU_TOPLINE_SUMMARIZATION": "CYU — Topline Summarization",
+    "VCG_ADM_BASE_CREATION": "VCG — ADM Base Creation Model",
+    "VCG_BACKGROUND_MESSAGE": "VCG — Background Message",
+    "VCG_EDIT_MODEL": "VCG — Edit Model",
+    "VCG_PROMPT_REWRITE": "VCG — Prompt Rewrite Variety Review",
+    "WRITING_TOOL_PROOFREAD_V2": "Writing Tool — Proofreading V2",
+    "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
+    "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
+    "CYU_ACTION_ITEMS": "CYU — Action Items",
+    "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
+}
+
+
+@functools.lru_cache(maxsize=None)
 def read_asset_file(filepath: str) -> str:
-    """Membaca isi file asset. Raises FileNotFoundError jika tidak ditemukan."""
+    """Membaca isi file asset dan meng-cache hasilnya di memori.
+
+    File asset bersifat statis selama runtime — caching mencegah disk I/O
+    berulang untuk setiap pemanggilan assemble_evaluator_prompt().
+    Raises FileNotFoundError jika file tidak ditemukan.
+    """
     abs_path = os.path.abspath(filepath)
     if not os.path.isfile(abs_path):
         raise FileNotFoundError(f"Asset file tidak ditemukan: {abs_path}")
     with open(abs_path, "r", encoding="utf-8") as f:
         content = f.read()
-    logger.info(f"Loaded asset: {abs_path} ({len(content)} chars)")
+    logger.info(f"Loaded & cached asset: {abs_path} ({len(content)} chars)")
     return content
 
 
 def _get_task_display_name(task_code: str) -> str:
     """Konversi task_code ke display name yang human-readable."""
-    TASK_DISPLAY = {
-        "PR": "PR Fine Tuning — Preference Ranking",
-        "AFM": "AFM — Safety Guide (Multi Modal)",
-        "TC_MESSAGE_REPLY": "Text Composition — TC Message Reply",
-        "TC_PROOFREADING": "Text Composition — TC Proofreading",
-        "CYU_WEBSITE_TOPIC": "CYU — Website Topic Identification",
-        "CYU_TOPLINE_SUMMARIZATION": "CYU — Topline Summarization",
-        "VCG_ADM_BASE_CREATION": "VCG — ADM Base Creation Model",
-        "VCG_BACKGROUND_MESSAGE": "VCG — Background Message",
-        "VCG_EDIT_MODEL": "VCG — Edit Model",
-        "VCG_PROMPT_REWRITE": "VCG — Prompt Rewrite Variety Review",
-        "WRITING_TOOL_PROOFREAD_V2": "Writing Tool — Proofreading V2",
-        "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
-        "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
-        "CYU_ACTION_ITEMS": "CYU — Action Items",
-        "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
-    }
-    return TASK_DISPLAY.get(task_code.upper(), task_code.replace("_", " "))
+    return _TASK_DISPLAY_NAMES.get(task_code.upper(), task_code.replace("_", " "))
 
 
 # ══════════════════════════════════════════════════════════════════════════
 # MAIN ASSEMBLY FUNCTIONS
 # ══════════════════════════════════════════════════════════════════════════
 
+@functools.lru_cache(maxsize=64)
 def assemble_evaluator_prompt(lang_code: str, task_code: str = "PR") -> str:
     """
     OPTIMIZED v2.0 — Main entry point (backward compatible dengan v1).

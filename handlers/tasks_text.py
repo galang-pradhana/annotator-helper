@@ -5,7 +5,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from database import get_session
 import user_service
 from services.evaluation import _calculate_dynamic_price, _run_evaluation_background, _run_vcg_evaluation_background
-from utils.helpers import send_large_message, _split_message
+from utils.helpers import send_large_message, _split_message, _parse_evaluation_input
 from core.config import *
 logger = logging.getLogger(__name__)
 

@@ -23,16 +23,19 @@ elif DATABASE_URL.startswith("postgres://"):
 
 # Setup engine async
 engine = create_async_engine(
-    DATABASE_URL, 
-    echo=False, 
+    DATABASE_URL,
+    echo=False,
     future=True,
     pool_pre_ping=True,      # Cek koneksi hidup sebelum pakai
     pool_recycle=1800,       # Recycle koneksi setiap 30 menit
-    pool_size=50,            # Siap untuk 50 user aktif instan
-    max_overflow=50,         # Tambahan 50 koneksi jika 50 penuh (total 100)
+    pool_size=10,            # 10 koneksi idle (cukup untuk operasi normal)
+    max_overflow=20,         # Burst hingga 30 total (PostgreSQL default max_connections=100)
+    pool_timeout=30,         # Raise error jika pool kosong >30 detik (cegah hang infinite)
     connect_args={
+        # Nonaktifkan prepared statement cache untuk kompatibilitas PgBouncer.
+        # Hapus kedua baris ini jika TIDAK pakai PgBouncer untuk meningkatkan performa query.
         "prepared_statement_cache_size": 0,
-        "statement_cache_size": 0
+        "statement_cache_size": 0,
     }
 )
 

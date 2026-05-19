@@ -1,4 +1,5 @@
 import os
+import html
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
@@ -45,22 +46,29 @@ async def view_history_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text("❌ Data tidak ditemukan.")
         return
 
+    import io
+    
     date_str = eval_obj.timestamp.strftime("%Y-%m-%d %H:%M")
     
-    header_html = (
-        f"📅 <b>Waktu</b>: {date_str}\n"
-        f"📋 <b>Task</b>: {eval_obj.task_code}\n"
-        f"──────────────────\n"
-        f"❓ <b>User Input</b>:\n"
-        f"<code>{html.escape(eval_obj.user_input[:1000])}</code>\n"
-        f"──────────────────\n"
-        f"🤖 <b>Jawaban AI</b>:\n"
+    file_content = (
+        f"WAKTU: {date_str}\n"
+        f"TASK: {eval_obj.task_code}\n"
+        f"=========================================\n\n"
+        f"USER INPUT:\n"
+        f"{eval_obj.user_input}\n\n"
+        f"=========================================\n\n"
+        f"JAWABAN AI:\n"
+        f"{eval_obj.ai_output}"
     )
     
-    await send_large_message(
-        update, 
-        eval_obj.ai_output, 
-        disclaimer=header_html
+    file_bytes = io.BytesIO(file_content.encode('utf-8'))
+    file_bytes.name = f"History_{eval_obj.task_code}_{eval_obj.id}.md"
+    
+    await context.bot.send_document(
+        chat_id=update.effective_chat.id,
+        document=file_bytes,
+        caption=f"📜 **Riwayat Evaluasi**\n📅 {date_str}\n📋 `{eval_obj.task_code}`",
+        parse_mode="Markdown"
     )
 
 

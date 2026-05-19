@@ -13,21 +13,14 @@ State Flow:
 
 import logging
 import os
-from core.config import *
-from handlers.menus import *
-from handlers.tasks_text import *
-from handlers.tasks_vcg import *
-from handlers.history import *
-from handlers.standalone import status_command, help_command, unknown_command, unknown_command_handler, unknown_message
-from utils.helpers import _parse_evaluation_input, send_large_message, _split_message
-from services.evaluation import _run_evaluation_background, _run_vcg_evaluation_background, _calculate_dynamic_price, _extract_database_content, _format_user_input
-import re
-import random
 import asyncio
 import time
+import re
+import random
 import base64
 import html
 import io
+from collections import deque
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -42,14 +35,54 @@ from telegram.ext import (
     filters,
     PicklePersistence,
 )
-from collections import deque
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- Deduplication Cache ---
-processed_updates = deque(maxlen=1000)
-# ---------------------------
+# ── Config & Constants (single source of truth) ───────────────────────────
+from core.config import (
+    ADMIN_ID, MAINTENANCE_MODE,
+    TIER_PRICING, TIER_MODELS, TIER_DISPLAY_LABELS, TIER_DISPLAY_RANGES,
+    SELECTING_LANG, SELECTING_PROJECT, SELECTING_TASK, CONFIRMING_TASK,
+    SELECTING_TIER, READY, SELECTING_SUBTASK, SELECTING_VCG_SUBTASK,
+    COLLECTING_USER_ASK, COLLECTING_RESP_A, COLLECTING_RESP_B, COLLECTING_RESP_C,
+    COLLECTING_VCG_PROMPT, COLLECTING_VCG_IMAGE_A, COLLECTING_VCG_IMAGE_B,
+    COLLECTING_VCG_IMAGE_C, COLLECTING_VCG_IMAGE_D, COLLECTING_SINGLE_SHOT,
+    DEPOSIT_ASK_NOMINAL,
+)
+
+# ── Handler Imports (explicit) ────────────────────────────────────────────
+from handlers.menus import (
+    start_command, lang_callback, project_callback, task_callback,
+    subtask_callback, vcg_subtask_callback, confirm_task_callback,
+    tier_callback, mulai_handler, mulai_outside_ready, cancel_command,
+    back_lang_callback, back_proj_callback, back_task_callback,
+)
+from handlers.tasks_text import (
+    _do_evaluation, collect_user_ask, collect_single_shot,
+    next_process_single_shot, next_to_resp_a, collect_resp_a,
+    next_to_resp_b, collect_resp_b, skip_resp_b, next_to_resp_c,
+    collect_resp_c, process_segmented_input, force_done_command,
+)
+from handlers.tasks_vcg import (
+    collect_vcg_prompt, vcg_next_to_image_a, collect_vcg_image_a,
+    vcg_next_to_image_b, collect_vcg_image_b, vcg_next_to_image_c,
+    collect_vcg_image_c, vcg_next_step_after_image_c, vcg_next_to_image_d,
+    collect_vcg_image_d, process_vcg_images,
+)
+from handlers.history import history_command, view_history_callback, feedback_callback
+from handlers.standalone import (
+    status_command, help_command, unknown_command, unknown_command_handler, unknown_message,
+)
+from utils.helpers import _parse_evaluation_input, send_large_message, _split_message
+from services.evaluation import (
+    _run_evaluation_background, _run_vcg_evaluation_background,
+    _calculate_dynamic_price, _extract_database_content, _format_user_input,
+)
+
+# --- Deduplication Cache (thread-safe with asyncio.Lock) ---
+_dedup_lock = asyncio.Lock()
+_processed_updates: set[int] = set()
 
 from database import init_db, get_session
 import user_service
@@ -74,39 +107,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("apscheduler").setLevel(logging.WARNING)
 logging.getLogger("telegram.ext").setLevel(logging.INFO)
 
-# ── Admin ID ──────────────────────────────────────────────────────────────
-ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
-
-
-# ── Pricing & Tier Constants ─────────────────────────────────────────────
-# Dynamic Pricing Ranges (Length-based, randomized per hit):
-# BASIC:   Short(<1k): 80-90,  Medium(1k-4k): 90-105,  Long(>4k): 105-120
-# PRO/PREMIUM: Short(<1k): 200-220, Medium(1k-4k): 220-240, Long(>4k): 240-250
-TIER_PRICING = {
-    "BASIC": 99,    # Median estimasi untuk balance check awal
-    "PRO": 225,     # Median estimasi untuk balance check awal
-    "PREMIUM": 225, # Median estimasi untuk balance check awal
-}
-TIER_MODELS = {
-    "BASIC": "gemini-3-flash",
-    "PRO": "gemini-3.1-pro",
-    "PREMIUM": "claude-sonnet-4-6",
-}
-# Label ramah pengguna untuk tampilan di chat (menyembunyikan nama model teknis)
-TIER_DISPLAY_LABELS = {
-    "BASIC": "Basic",
-    "PRO": "Pro",
-    "PREMIUM": "Premium",
-}
-TIER_DISPLAY_RANGES = {
-    "BASIC": "85 - 120",
-    "PRO": "200 - 250",
-    "PREMIUM": "200 - 250",
-}
-
-# ── State Constants ───────────────────────────────────────────────────────
-
-DEPOSIT_ASK_NOMINAL = 100
+# All constants are imported from core.config — no local overrides.
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -116,13 +117,17 @@ DEPOSIT_ASK_NOMINAL = 100
 async def check_access_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Middleware yang berjalan sebelum Command/Message handler.
-    Melakukan deduplication dan cek registrasi dasar.
+    Melakukan deduplication (thread-safe) dan cek akses dasar.
     """
-    # 0. Deduplication Cache
-    if update.update_id in processed_updates:
-        logger.warning(f"Duplicate update {update.update_id} ignored.")
-        raise ApplicationHandlerStop()
-    processed_updates.append(update.update_id)
+    # 0. Deduplication — thread-safe dengan asyncio.Lock (Fix #3)
+    async with _dedup_lock:
+        if update.update_id in _processed_updates:
+            logger.warning(f"Duplicate update {update.update_id} ignored.")
+            raise ApplicationHandlerStop()
+        _processed_updates.add(update.update_id)
+        # Bersihkan set agar tidak tumbuh tanpa batas (simpan 2000 terbaru)
+        if len(_processed_updates) > 2000:
+            _processed_updates.clear()
 
     if not update.effective_user:
         return
@@ -130,7 +135,7 @@ async def check_access_middleware(update: Update, context: ContextTypes.DEFAULT_
     tg_id = update.effective_user.id
     is_admin = (tg_id == ADMIN_ID)
 
-    # ── Task 8: Maintenance Mode Check ──────────────────────────────
+    # ── Maintenance Mode Check ───────────────────────────────────────
     maintenance_mode = context.bot_data.get("MAINTENANCE_MODE", False)
     if maintenance_mode and not is_admin:
         if update.message:
@@ -155,24 +160,27 @@ async def check_access_middleware(update: Update, context: ContextTypes.DEFAULT_
 
     text = update.message.text or ""
 
-    # ── Task 3: Rate Limiter (5 detik) ──────────────────────────────
+    # ── BYPASS: Command utama selalu lolos dari rate limit (Fix #4) ──
+    # Harus di-check SEBELUM rate limiter, bukan sesudahnya.
+    if text.startswith(("/start", "/cancel", "/deposit", "/add_balance", "/add",
+                         "/stats", "/help", "/status", "/history", "/user",
+                         "/broadcast", "/check_fail", "/maintenance",
+                         "/mulai", "/next", "/done", "/skip")):
+        return
+
+    # ── Rate Limiter (5 detik, non-admin only) ───────────────────────
     if not is_admin:
         last_time = context.user_data.get("last_request_time", 0)
         now = time.time()
         if now - last_time < 5:
             wait_time = int(5 - (now - last_time))
-            if text.startswith("/"):
-                await update.message.reply_text(
-                    f"⏳ **Terlalu Cepat!**\n"
-                    f"Harap tunggu {wait_time} detik lagi.",
-                    parse_mode="Markdown"
-                )
+            await update.message.reply_text(
+                f"⏳ **Terlalu Cepat!**\n"
+                f"Harap tunggu {wait_time} detik lagi.",
+                parse_mode="Markdown"
+            )
             raise ApplicationHandlerStop()
         context.user_data["last_request_time"] = now
-
-    # BYPASS: Biarkan command utama lolos dari rate limit
-    if text.startswith(("/start", "/cancel", "/deposit", "/add_balance", "/add", "/stats", "/help", "/status", "/history", "/user", "/broadcast", "/check_fail", "/maintenance", "/mulai", "/next", "/done", "/skip")):
-        return
 
 
 async def check_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -375,6 +383,7 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel_command)],
         name="deposit_conversation",
+        persistent=False,  # Fix #8 — tidak perlu persist state deposit
     )
     app.add_handler(deposit_conv_handler, group=1)
     
