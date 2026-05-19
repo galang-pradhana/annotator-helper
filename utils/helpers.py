@@ -96,7 +96,7 @@ async def send_large_message(
         file_content = f"{text}"
         bio = io.BytesIO(file_content.encode('utf-8'))
         bio.name = "hasil_evaluasi.md"
-        await update.message.reply_document(
+        await msg_handle.reply_document(
             document=bio,
             caption="📄 **Hasil Evaluasi AI** (Buka untuk membaca keseluruhan teks tanpa terpotong).",
             parse_mode="Markdown",
