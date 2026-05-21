@@ -100,12 +100,13 @@ async def send_large_message(
     # Langkah 2: kirim sebagai file dokumen
     doc_sent = False
     try:
-        file_content = text
-        bio = io.BytesIO(file_content.encode('utf-8'))
-        bio.seek(0)
-        bio.name = "hasil_evaluasi.md"
+        # Tambahkan jeda untuk mencegah FloodWait dari Telegram API
+        if disclaimer:
+            await asyncio.sleep(1.5)
+            
+        file_bytes = text.encode('utf-8')
         await msg_handle.reply_document(
-            document=bio,
+            document=file_bytes,
             filename="hasil_evaluasi.md",
             caption="📄 <b>Hasil Evaluasi AI</b> (Buka untuk membaca keseluruhan teks tanpa terpotong).",
             parse_mode="HTML",
@@ -123,6 +124,9 @@ async def send_large_message(
         try:
             chunks = _split_message(text, chunk_size=3500)
             for i, chunk in enumerate(chunks):
+                if i > 0:
+                    await asyncio.sleep(1.5) # Jeda antar pesan agar tidak FloodWait
+                    
                 is_last = (i == len(chunks) - 1)
                 await msg_handle.reply_text(
                     chunk,

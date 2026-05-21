@@ -427,16 +427,24 @@ def _map_to_openrouter_model(kie_model_name: str, is_vision: bool = False) -> st
     if "claude" in model:
         return "anthropic/claude-sonnet-4-5"
     
+    # Mapping nama model lokal ke ID model OpenRouter yang sesuai
+    mapping = {
+        # DeepSeek
+        "deepseek-flash": "deepseek/deepseek-v4-flash",
+        "deepseek-pro": "deepseek/deepseek-v4-pro"
+    }
+
+    # Cek apakah ada mapping khusus
+    for key, val in mapping.items():
+        if key in model:
+            return val
+    
     # Jika task butuh baca gambar (Multimodal/VCG)
     if is_vision:
         if "flash" in model:
             return "google/gemini-flash-1.5"
         return "google/gemini-pro-1.5"
     
-    # Text-only tasks
-    if "flash" in model or "basic" in model:
-        return "deepseek/deepseek-v4-flash"
-        
     # PRO/PREMIUM tier
     return "deepseek/deepseek-v4-pro"
 
