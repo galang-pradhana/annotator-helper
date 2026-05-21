@@ -5,6 +5,18 @@ import logging
 from telegram import Update, InlineKeyboardMarkup
 
 logger = logging.getLogger(__name__)
+import telegram.error
+
+async def _retry_telegram_call(func, *args, retries=3, delay=2.0, **kwargs):
+    """Mencoba ulang panggilan Telegram API untuk mengatasi masalah koneksi/timeout (terutama setelah AI processing lama)."""
+    for attempt in range(1, retries + 1):
+        try:
+            return await func(*args, **kwargs)
+        except (telegram.error.TimedOut, telegram.error.NetworkError) as e:
+            logger.warning(f"Telegram API Timeout/NetworkError (attempt {attempt}/{retries}): {e}")
+            if attempt == retries:
+                raise
+            await asyncio.sleep(delay)
 
 
 def _safe_html(t: str) -> str:
@@ -77,7 +89,10 @@ async def send_large_message(
     # Opsi A: Jika pendek, kirim sbg HTML. Jika panjang, kirim dokumen instan.
     if len(full_html) <= 3800:
         try:
-            await msg_handle.reply_text(full_html, parse_mode="HTML", reply_markup=reply_markup, read_timeout=30, write_timeout=30)
+            await _retry_telegram_call(
+                msg_handle.reply_text,
+                full_html, parse_mode="HTML", reply_markup=reply_markup, read_timeout=30, write_timeout=30
+            )
             return
         except Exception as e:
             logger.warning(f"HTML send failed: {e}. Falling back to document.")
@@ -89,11 +104,17 @@ async def send_large_message(
             intro = disclaimer
             if footer:
                 intro += f"\n(Hasil terlalu panjang, dikirim sebagai file di bawah ini.)\n\n{footer}"
-            await msg_handle.reply_text(intro, parse_mode="HTML", read_timeout=30, write_timeout=30)
+            await _retry_telegram_call(
+                msg_handle.reply_text,
+                intro, parse_mode="HTML", read_timeout=30, write_timeout=30
+            )
         except Exception as e:
             logger.warning(f"Disclaimer send failed: {e}")
             try:
-                await msg_handle.reply_text("⚠️ Hasil evaluasi (terlalu panjang, lihat file di bawah).", read_timeout=30, write_timeout=30)
+                await _retry_telegram_call(
+                    msg_handle.reply_text,
+                    "⚠️ Hasil evaluasi (terlalu panjang, lihat file di bawah).", read_timeout=30, write_timeout=30
+                )
             except Exception:
                 pass
 
@@ -105,7 +126,8 @@ async def send_large_message(
             await asyncio.sleep(1.5)
             
         file_bytes = text.encode('utf-8')
-        await msg_handle.reply_document(
+        await _retry_telegram_call(
+            msg_handle.reply_document,
             document=file_bytes,
             filename="hasil_evaluasi.md",
             caption="📄 <b>Hasil Evaluasi AI</b> (Buka untuk membaca keseluruhan teks tanpa terpotong).",
@@ -128,7 +150,8 @@ async def send_large_message(
                     await asyncio.sleep(1.5) # Jeda antar pesan agar tidak FloodWait
                     
                 is_last = (i == len(chunks) - 1)
-                await msg_handle.reply_text(
+                await _retry_telegram_call(
+                    msg_handle.reply_text,
                     chunk,
                     read_timeout=30,
                     write_timeout=30,
@@ -137,7 +160,8 @@ async def send_large_message(
         except Exception as e:
             logger.error(f"Chunked text fallback juga gagal: {type(e).__name__}: {e}")
             try:
-                await msg_handle.reply_text(
+                await _retry_telegram_call(
+                    msg_handle.reply_text,
                     "❌ Gagal mengirim hasil evaluasi ke Telegram.\n"
                     "Kemungkinan koneksi lambat atau ukuran respons terlalu besar.\n"
                     "Silakan coba lagi.",

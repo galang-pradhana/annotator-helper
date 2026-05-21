@@ -9,7 +9,7 @@ from database import get_session
 import user_service
 from prompt_assembler import assemble_evaluator_prompt
 from kie_api import call_ai_engine, call_ai_engine_multimodal
-from utils.helpers import send_large_message
+from utils.helpers import send_large_message, _retry_telegram_call
 
 logger = logging.getLogger(__name__)
 
@@ -218,23 +218,34 @@ async def _run_evaluation_background(
         )
     except Exception as e:
         logger.error(f"API call error: {e}")
-        await status_msg.edit_text(
-            "❌ **Sistem sibuk, saldo tidak dipotong.**\n"
-            "Silakan coba lagi nanti.\n\n"
-            f"Detail: `{type(e).__name__}: {e}`"
-        )
+        try:
+            await _retry_telegram_call(
+                status_msg.edit_text,
+                "❌ **Sistem sibuk, saldo tidak dipotong.**\n"
+                "Silakan coba lagi nanti.\n\n"
+                f"Detail: `{type(e).__name__}: {e}`"
+            )
+        except Exception:
+            pass
         return
 
     # Cek apakah response menunjukkan error (❌) atau peringatan sistem (⚠️)
     if llm_response.startswith(("❌", "⚠️")):
-        await status_msg.edit_text(
-            "❌ **Sistem sibuk, saldo tidak dipotong.**\n"
-            "Silakan coba lagi nanti.\n\n"
-            f"{llm_response}"
-        )
+        try:
+            await _retry_telegram_call(
+                status_msg.edit_text,
+                "❌ **Sistem sibuk, saldo tidak dipotong.**\n"
+                "Silakan coba lagi nanti.\n\n"
+                f"{llm_response}"
+            )
+        except Exception:
+            pass
         return
 
-    await status_msg.edit_text("✅ Respons diterima! Memotong saldo...")
+    try:
+        await _retry_telegram_call(status_msg.edit_text, "✅ Respons diterima! Memotong saldo...")
+    except Exception:
+        pass
 
     # 4. SUKSES: Baru potong saldo & Simpan History
     eval_id = 0
@@ -263,7 +274,7 @@ async def _run_evaluation_background(
 
     # 5. Kirim hasil akhir ke user
     try:
-        await status_msg.delete()
+        await _retry_telegram_call(status_msg.delete)
     except Exception as e:
         logger.warning(f"Gagal hapus status_msg: {e}")
     disclaimer_html, footer_html, reply_markup = _build_result_ui(tier, price, remaining, eval_id)
@@ -376,19 +387,30 @@ async def _run_vcg_evaluation_background(
         )
     except Exception as e:
         logger.error(f"VCG API error: {e}")
-        await status_msg.edit_text(
-            "❌ **Sistem sibuk, saldo tidak dipotong.**\n"
-            f"Detail: `{type(e).__name__}: {e}`"
-        )
+        try:
+            await _retry_telegram_call(
+                status_msg.edit_text,
+                "❌ **Sistem sibuk, saldo tidak dipotong.**\n"
+                f"Detail: `{type(e).__name__}: {e}`"
+            )
+        except Exception:
+            pass
         return
 
     if llm_response.startswith(("❌", "⚠️")):
-        await status_msg.edit_text(
-            f"❌ **Sistem error, saldo tidak dipotong.**\n{llm_response}"
-        )
+        try:
+            await _retry_telegram_call(
+                status_msg.edit_text,
+                f"❌ **Sistem error, saldo tidak dipotong.**\n{llm_response}"
+            )
+        except Exception:
+            pass
         return
 
-    await status_msg.edit_text("✅ Respons VCG diterima! Memotong saldo...")
+    try:
+        await _retry_telegram_call(status_msg.edit_text, "✅ Respons VCG diterima! Memotong saldo...")
+    except Exception:
+        pass
 
     # Potong saldo & Simpan History
     eval_id = 0
@@ -409,7 +431,7 @@ async def _run_vcg_evaluation_background(
         remaining = 0
 
     try:
-        await status_msg.delete()
+        await _retry_telegram_call(status_msg.delete)
     except Exception as e:
         logger.warning(f"[VCG] Gagal hapus status_msg: {e}")
     disclaimer_html, footer_html, reply_markup = _build_result_ui(tier, price, remaining, eval_id, is_vcg=True)
