@@ -4,13 +4,16 @@
 # {{TARGET_LANGUAGE}}      → contoh: "Bahasa Thailand", "Bahasa Malaysia", "Bahasa Korea"
 # {{TARGET_LANGUAGE_CODE}} → contoh: "th", "ms", "ko"
 #
-# VERSI: Enhanced v2 — Localization Enforcement Update
-# Perubahan dari v1:
-#   1. Presumption of issues pada evaluasi Localization (bukan pasif "no issues" by default)
-#   2. Template output Localization wajib isi checklist A–E per response
-#   3. Contoh kalibrasi per bahasa ditambahkan di Supplemental
-#   4. Satisfaction logic diperbarui: localization issues → MAX Slightly Satisfying
-#   5. Audit internal ditambah 3 item baru terkait Localization
+# VERSI: Enhanced v3 — Full 13-Category Localization Coverage
+# Perubahan dari v2:
+#   1. Checklist B dipecah: Unlocalized Info + Non-local Perspective + Overly-localized (3 definisi terpisah)
+#   2. Checklist C dipecah: Vocabulary & Awkward Writing (definisi dan contoh terpisah)
+#   3. Checklist C2 BARU: Phrase or Idiom — definisi, trigger, dan contoh per bahasa
+#   4. Checklist F BARU: Units of Measurement — suhu, jarak, berat, volume, mata uang, format angka
+#   5. Flag Otomatis diperluas: +5 trigger baru (satuan imperial, institusi asing, idiom literal, overly-localized, format angka)
+#   6. Contoh kalibrasi per bahasa diperluas: semua 13 kategori kini punya ≥1 contoh per bahasa
+#   7. Template output checklist: 5 item → 7 item (A, B, C, C2, D, E, F)
+#   8. Contoh "No issues" yang valid ditambahkan 3 kriteria baru
 
 ---
 
@@ -202,20 +205,58 @@ Tanyakan pada dirimu:
   [ ] Apakah spasi antar kata/frasa mengikuti aturan bahasa target?
       (Thai dan Khmer tidak pakai spasi antar kata, hanya antar kalimat/frasa)
 
-**B. LOCAL PERSPECTIVE & NON-LOCAL PERSPECTIVE**
-Tanyakan pada dirimu:
+**B. LOCAL PERSPECTIVE, UNLOCALIZED INFO & OVERLY-LOCALIZED**
+
+⚠️ BEDAKAN 3 kategori ini dengan cermat — ketiganya berbeda:
+
+  📌 UNLOCALIZED INFORMATION
+  Definisi: Response menyebut fakta, institusi, sistem, atau referensi yang HANYA relevan
+  di locale LAIN dan tidak diadaptasi untuk locale target.
+  Tanyakan:
+  [ ] Apakah ada referensi sistem/institusi asing yang tidak dikenal locale target?
+      Contoh error per bahasa:
+      - th: Menyebut "IRS", "Medicare", "Social Security", "ZIP code"
+      - ms: Menyebut "NHS", "Centrelink", "SSN", "zip code" (seharusnya "poskod")
+      - ko: Menyebut "Medicaid", "FAFSA", "zip code" (seharusnya "우편번호")
+      - ar: Menyebut "county court", "Social Security", "HOA"
+      - vi: Menyebut "state tax", "IRS", "zip code" (seharusnya "mã bưu chính")
+      - ja: Menyebut "IRS", "county", "Social Security" tanpa penjelasan/adaptasi
+  [ ] Apakah contoh, brand, atau produk yang disebut dikenal di locale target?
+      (Menyebut "Walgreens" untuk user Thailand, atau "Carrefour" untuk user yang
+       locale-nya tidak punya Carrefour — tanpa konteks)
+  [ ] Apakah link, nomor telepon, atau alamat yang diberikan relevan untuk locale target?
+
+  📌 NON-LOCAL PERSPECTIVE
+  Definisi: Response ditulis dari sudut pandang "orang luar" yang melihat locale target,
+  bukan dari dalam. Fakta-faktanya mungkin benar tapi framing-nya terasa asing.
+  Tanyakan:
   [ ] Apakah response mengasumsikan konteks yang BUKAN milik locale target?
       Contoh error:
-      - Menyebut "winter holiday" untuk locale tropis (th, ms, id)
-      - Menggunakan referensi budaya Barat tanpa adaptasi (Halloween, Thanksgiving)
+      - Menyebut "winter holiday" untuk locale tropis (th, ms, id, vi)
+      - Menggunakan referensi budaya Barat tanpa adaptasi (Halloween, Thanksgiving, Easter)
       - Memberikan contoh harga dalam USD untuk user non-USD locale tanpa konversi
-      - Menyebut institusi/brand yang tidak dikenal di locale target
-  [ ] Apakah perspective-nya over-specified?
-      (Misal: menyebut "di Malaysia" terus-terusan untuk user Malaysia — terasa tidak natural)
-  [ ] Apakah perspektif kulturalnya netral atau justru stereotype?
-      (Tone terdengar seperti "orang luar yang menjelaskan tentang negara itu")
+      - Tone terdengar seperti "orang luar yang menjelaskan tentang negara itu"
+        mis: "Di Thailand, orang biasanya..." — padahal user-nya orang Thailand sendiri
+  [ ] Apakah response menyapa/menjelaskan hal yang sudah jelas bagi penutur asli?
+      (Menjelaskan arti Songkran untuk user Thailand, atau menjelaskan arti Hari Raya
+       untuk user Malaysia — ini non-local perspective)
 
-**C. VOCABULARY & NATURAL WRITING**
+  📌 OVERLY-LOCALIZED CONTENT
+  Definisi: Response terlalu menekankan identitas lokal padahal tidak perlu,
+  sehingga terasa berlebihan atau patronizing.
+  Tanyakan:
+  [ ] Apakah locale/negara disebut berulang-ulang tanpa keperluan?
+      Contoh error:
+      - ms: "Di Malaysia, anda boleh... cara Malaysia untuk... orang Malaysia biasanya..."
+        (terlalu berulang; cukup pakai "anda" atau langsung ke poinnya)
+      - ko: Terus-terusan menyebut "한국에서는..." setiap kalimat
+      - th: Setiap paragraf dimulai dengan "ในประเทศไทย..."
+  [ ] Apakah response menambahkan konteks lokal yang tidak diminta dan tidak relevan?
+      (User tanya cara masak telur, response menambahkan "sesuai budaya lokal kita...")
+  [ ] Apakah mata uang/satuan lokal disebut terlalu eksplisit?
+      (Menyebut "Ringgit Malaysia (MYR)" berulang untuk user Malaysia — cukup "RM")
+
+**C. VOCABULARY & AWKWARD WRITING**
 Tanyakan pada dirimu:
   [ ] Apakah kata-kata yang digunakan adalah kosakata SEHARI-HARI yang dipakai penutur asli,
       bukan hasil terjemahan literal dari Bahasa Inggris?
@@ -223,9 +264,43 @@ Tanyakan pada dirimu:
       - ms: "Saya memerlukan maklumat" terasa formal; "Saya nak tahu" lebih natural di konteks kasual
       - ko: Penggunaan Hanja-heavy term di konteks santai terasa kaku
       - th: Mixing politeness level (ครับ/ค่ะ) secara tidak konsisten
+      - vi: Calque langsung dari Inggris, mis. "tải về" dipakai tapi "download" lebih umum di konteks tech
   [ ] Apakah ada kata pinjaman (loanword) yang salah dieja atau digunakan secara janggal?
-  [ ] Apakah response terasa seperti hasil machine-translation (awkward word order,
-      calque langsung dari Inggris)?
+
+  📌 AWKWARD OR UNNATURAL WRITING (cek secara terpisah)
+  Definisi: Response terasa "tidak manusiawi" — bukan karena kata-katanya salah,
+  tapi karena cara penyusunannya tidak seperti yang ditulis penutur asli.
+  Tanyakan:
+  [ ] Apakah struktur kalimat terasa seperti hasil machine-translation?
+      Tanda-tanda:
+      - Urutan kata mengikuti pola Inggris, bukan pola bahasa target
+        mis. ms: "Adalah penting untuk anda mengetahui..." → kaku, lebih natural: "Penting untuk anda tahu..."
+      - Calque langsung (direct translation) yang tidak idiomatis
+        mis. ko: "시간을 죽이다" (kill time) dipakai literal → lebih natural: "시간을 보내다"
+      - Kalimat terlalu panjang dengan subordinasi berlebihan (pola Inggris complex sentence)
+        dibanding struktur pendek yang lebih disukai di bahasa target
+  [ ] Apakah transisi antar kalimat/paragraf terasa janggal?
+      (Konjungsi yang salah, atau tidak pakai konjungsi padahal bahasa target menggunakannya)
+  [ ] Apakah level formalitas konsisten dari awal hingga akhir response?
+      (Awal formal, tiba-tiba kasual di tengah, lalu formal lagi → awkward)
+
+**C2. PHRASE OR IDIOM**
+  Definisi: Penggunaan ungkapan, peribahasa, atau idiom yang salah — baik salah pilih,
+  salah terjemahkan, atau memakai idiom bahasa lain.
+  Tanyakan:
+  [ ] Apakah ada idiom bahasa Inggris yang diterjemahkan secara literal ke bahasa target?
+      Contoh error:
+      - ms: "membunuh dua burung dengan satu batu" (ok) tapi "it is what it is" → diterjemahkan
+        kaku sebagai "ia adalah apa ia adanya" → flag Phrase or idiom
+      - th: Idiom Inggris ditranslit tanpa padanan lokal
+      - ko: "고양이 손도 빌리고 싶다" (very busy, lit. 'want to borrow even a cat's paw') —
+        jika idiom lokal seperti ini TIDAK digunakan padahal konteksnya tepat, bisa jadi
+        tanda non-nativeness (Vocabulary / Phrase or idiom)
+      - ja: "猫の手も借りたい" — sama, idiom lokal yang natural tapi mungkin tidak dipakai
+  [ ] Apakah peribahasa/ungkapan lokal yang digunakan memang relevan dan tepat konteksnya?
+      (Peribahasa yang dipaksakan karena ingin "terasa lokal" padahal tidak pas → Overly-localized)
+  [ ] Apakah ada frasa yang terdengar "buku teks" — grammatically correct tapi tidak
+      dipakai oleh penutur asli dalam percakapan normal?
 
 **D. SPELLING (UNTUK BAHASA TARGET)**
   [ ] Cek ejaan bukan hanya typo umum, tapi juga:
@@ -246,8 +321,35 @@ Tanyakan pada dirimu:
       - jp: は vs が — perlu presisi
       - th: ครับ/ค่ะ/นะ — level kesopanan harus konsisten dengan register
 
-─────────────────────────────────────────
-🚩 FLAG OTOMATIS — LOCALIZATION ISSUES BERAT
+**F. UNITS OF MEASUREMENT**
+  Definisi: Penggunaan satuan yang tidak sesuai standar locale target — baik salah satuan
+  maupun satuan yang benar tapi tidak lazim dipakai di locale tersebut.
+  Tanyakan:
+  [ ] Apakah satuan SUHU sesuai konvensi locale target?
+      - Sebagian besar dunia (th, ms, ko, ja, ar, vi, id): °C
+      - AS: °F — jika response untuk user non-AS menggunakan °F tanpa konversi → flag
+  [ ] Apakah satuan JARAK/PANJANG sesuai?
+      - Sebagian besar dunia: km, meter, cm
+      - AS/UK (sebagian): miles, yards, feet, inches
+      Contoh error: response untuk user Thailand menyebut "5 miles" → flag Units of measurement
+  [ ] Apakah satuan BERAT sesuai?
+      - Sebagian besar dunia: kg, gram
+      - AS: lbs, ounces
+      Contoh error: resep untuk user Korea menyebut "2 lbs tepung" → flag
+  [ ] Apakah satuan VOLUME sesuai?
+      - Sebagian besar dunia: liter, ml
+      - AS: cups, fl oz, gallon
+      Contoh error: resep untuk user Jepang menyebut "1 cup" tanpa konversi ml → flag
+  [ ] Apakah FORMAT MATA UANG sesuai?
+      - Simbol lokal yang tepat: RM (ms), ฿ atau บาท (th), ₩ (ko), ¥ atau 円 (ja), ₫ (vi)
+      - Contoh error: response untuk user Malaysia menyebut harga dalam USD atau GBP
+        tanpa konteks yang relevan → flag Unlocalized info / Units of measurement
+  [ ] Apakah UKURAN PAKAIAN/SEPATU menggunakan standar lokal jika relevan?
+      - Standar Asia (th, ko, ja, ms) vs standar US/EU berbeda
+  [ ] Apakah FORMAT ANGKA sesuai? (pemisah ribuan dan desimal)
+      - Sebagian besar dunia: 1.000,50 (titik ribuan, koma desimal)
+      - AS/UK: 1,000.50 (koma ribuan, titik desimal)
+      Contoh error: response untuk user Vietnam menulis "1,000.50" → flag Formatting & punctuation / Units
 ─────────────────────────────────────────
 
 Jika ditemukan salah satu di bawah ini, WAJIB flag sebagai Issues Present:
@@ -256,6 +358,11 @@ Jika ditemukan salah satu di bawah ini, WAJIB flag sebagai Issues Present:
   → Perspektif kulturalnya jelas bukan dari locale target (referensi institusi, musim, mata uang salah)
   → Struktur kalimat mengikuti pola SOV/SVO yang salah untuk bahasa target
   → Honorifik/partikel dipakai sembarangan atau tidak konsisten
+  → Satuan imperial (miles, lbs, °F, fl oz) dipakai untuk locale metrik tanpa konversi
+  → Institusi/sistem asing (IRS, NHS, ZIP code, SSN) disebut tanpa adaptasi locale target
+  → Idiom bahasa Inggris diterjemahkan literal → hasilnya tidak idiomatis di bahasa target
+  → Nama negara/kota locale disebut berulang (>2x) tanpa keperluan → suspect Overly-localized
+  → Format angka desimal/ribuan tidak sesuai konvensi locale (mis. 1,000.50 untuk user Vietnam/Thailand)
 
 ─────────────────────────────────────────
 📚 CONTOH KALIBRASI PER BAHASA
@@ -265,33 +372,54 @@ Gunakan contoh ini sebagai anchor untuk menentukan apakah isu cukup significant
 untuk di-flag. Semua contoh di bawah → wajib flag "Issues present".
 
 **Melayu (ms):**
-- "Anda perlu menghubungi kami" di konteks kasual → flag: Tone (terlalu formal; lebih natural: "Awak kena hubungi kami" atau "Sila hubungi kami")
-- "color" muncul dalam teks Melayu → flag: Spelling/Vocabulary (seharusnya "warna" atau "kolour" tidak dipakai)
+- "Anda perlu menghubungi kami" di konteks kasual → flag: Tone
+- "color" muncul dalam teks Melayu → flag: Spelling/Vocabulary
 - Menggunakan referensi "IRS" atau "Social Security" → flag: Unlocalized info
-- Menyebut "Ringgit Malaysia" berulang untuk user Malaysia → flag: Non-local perspective (Overly-specified; cukup "RM")
+- Menyebut "Ringgit Malaysia" berulang untuk user Malaysia → flag: Overly-localized
+- "membunuh dua burung dengan satu batu" OK, tapi "it is what it is" → "ia adalah apa ia adanya" → flag: Phrase or idiom
+- Resep menyebut "2 cups flour" tanpa konversi ml/gram → flag: Units of measurement
+- "Di Malaysia, orang Malaysia biasanya..." (berulang) → flag: Overly-localized
 
 **Thailand (th):**
 - Spasi sebelum tanda titik/koma bergaya Latin → flag: Formatting & punctuation
-- Mixing ครับ dan ค่ะ dalam satu response → flag: Grammar / Tone (level kesopanan tidak konsisten)
+- Mixing ครับ dan ค่ะ dalam satu response → flag: Grammar / Tone
 - Referensi "winter season" untuk konteks Thailand → flag: Non-local perspective
+- Menyebut "ZIP code" bukan "รหัสไปรษณีย์" → flag: Unlocalized info
+- Suhu ditulis dalam °F tanpa konversi → flag: Units of measurement
+- Jarak disebut dalam "miles" bukan "กิโลเมตร" → flag: Units of measurement
+- "ในประเทศไทย..." muncul di setiap paragraf → flag: Overly-localized
 
 **Korea (ko):**
 - Tanda kutip " " bukan 「」atau『』 → flag: Formatting & punctuation
-- Penggunaan Hanja-heavy term di konteks santai → flag: Vocabulary / Awkward writing
+- Penggunaan Hanja-heavy term di konteks santai → flag: Vocabulary
 - Partikel 은/는 vs 이/가 dipakai sembarangan → flag: Grammar
+- Menyebut "FAFSA" atau "Social Security" → flag: Unlocalized info
+- Idiom Inggris ditransliterasi langsung tanpa padanan Korea → flag: Phrase or idiom
+- Berat ditulis dalam "lbs" bukan "kg" → flag: Units of measurement
+- Format angka "1,000.50" bukan "1.000,50" → flag: Formatting & punctuation / Units
 
 **Arab (ar):**
-- Tanda tanya "?" bukan "؟" → flag: Formatting & punctuation (WAJIB flag)
-- Koma "," bukan "،" → flag: Formatting & punctuation (WAJIB flag)
-- Teks arah kiri-ke-kanan padahal harus kanan-ke-kiri → flag: Formatting & punctuation
+- Tanda tanya "?" bukan "؟" → flag: Formatting & punctuation (WAJIB)
+- Koma "," bukan "،" → flag: Formatting & punctuation (WAJIB)
+- Teks arah kiri-ke-kanan → flag: Formatting & punctuation
+- Menyebut "county court" atau "HOA" → flag: Unlocalized info
+- Idiom Barat diterjemahkan literal ke Arab → flag: Phrase or idiom
+- Suhu dalam °F untuk negara Arab non-AS → flag: Units of measurement
 
 **Vietnam (vi):**
-- Diacritic hilang (mis. "khoe" bukan "khỏe") → flag: Spelling (WAJIB flag; makna berubah)
-- Intonasi/tone mark salah posisi → flag: Spelling
+- Diacritic hilang (mis. "khoe" bukan "khỏe") → flag: Spelling (WAJIB; makna berubah)
+- Tone mark salah posisi → flag: Spelling
+- Menyebut "zip code" bukan "mã bưu chính" → flag: Unlocalized info
+- Kalimat terasa hasil Google Translate (struktur kaku, calque Inggris) → flag: Awkward writing
+- Jarak dalam "miles" bukan "km" → flag: Units of measurement
 
 **Jepang (ja):**
-- Titik "." bukan "。" → flag: Formatting & punctuation (WAJIB flag)
-- Koma "," bukan "、" → flag: Formatting & punctuation (WAJIB flag)
+- Titik "." bukan "。" → flag: Formatting & punctuation (WAJIB)
+- Koma "," bukan "、" → flag: Formatting & punctuation (WAJIB)
+- Menyebut "IRS" atau "Social Security" tanpa penjelasan → flag: Unlocalized info
+- Idiom "猫の手も借りたい" tidak dipakai padahal konteksnya pas → flag: Phrase or idiom
+- Berat dalam "lbs" bukan "kg", volume dalam "cups" bukan "ml" → flag: Units of measurement
+- Response terasa terlalu desu/masu (terlalu formal) untuk konteks santai → flag: Tone
 
 **CONTOH "No issues" yang VALID (harus bisa menyebutkan ini):**
 - Tanda baca sesuai konvensi lokal, tidak ada gaya Latin yang menyusup
@@ -299,6 +427,9 @@ untuk di-flag. Semua contoh di bawah → wajib flag "Issues present".
 - Perspektif kulturalnya netral dan relevan untuk locale target
 - Honorifik/partikel digunakan konsisten sesuai register percakapan
 - Tidak ada referensi institusi, mata uang, atau musim yang salah locale
+- Satuan yang digunakan sesuai standar lokal (metrik untuk non-AS)
+- Tidak ada idiom asing yang diterjemahkan secara literal
+- Frekuensi penyebutan nama negara/kota wajar, tidak berlebihan
 
 
 
@@ -423,11 +554,13 @@ Following Instructions:
 
 Localization:
   ── Pemeriksaan Checklist (WAJIB diisi semua) ──
-    A. Punctuation & Formatting : [OK / ⚠️ Temuan: ...]
-    B. Local Perspective        : [OK / ⚠️ Temuan: ...]
-    C. Vocabulary & Natural     : [OK / ⚠️ Temuan: ...]
-    D. Spelling                 : [OK / ⚠️ Temuan: ...]
-    E. Grammar                  : [OK / ⚠️ Temuan: ...]
+    A. Punctuation & Formatting  : [OK / ⚠️ Temuan: ...]
+    B. Unlocalized / Perspective : [OK / ⚠️ Temuan: ...]
+    C. Vocabulary & Awkward      : [OK / ⚠️ Temuan: ...]
+    C2. Phrase or Idiom          : [OK / ⚠️ Temuan: ...]
+    D. Spelling                  : [OK / ⚠️ Temuan: ...]
+    E. Grammar                   : [OK / ⚠️ Temuan: ...]
+    F. Units of Measurement      : [OK / ⚠️ Temuan: ...]
   ── Hasil Pemeriksaan ──
   Temuan         : [jelaskan temuan atau "Tidak ada isu — semua checklist OK"]
   Kategori issue : [daftar kategori, atau "—"]
@@ -488,11 +621,13 @@ Following Instructions:
 
 Localization:
   ── Pemeriksaan Checklist (WAJIB diisi semua) ──
-    A. Punctuation & Formatting : [OK / ⚠️ Temuan: ...]
-    B. Local Perspective        : [OK / ⚠️ Temuan: ...]
-    C. Vocabulary & Natural     : [OK / ⚠️ Temuan: ...]
-    D. Spelling                 : [OK / ⚠️ Temuan: ...]
-    E. Grammar                  : [OK / ⚠️ Temuan: ...]
+    A. Punctuation & Formatting  : [OK / ⚠️ Temuan: ...]
+    B. Unlocalized / Perspective : [OK / ⚠️ Temuan: ...]
+    C. Vocabulary & Awkward      : [OK / ⚠️ Temuan: ...]
+    C2. Phrase or Idiom          : [OK / ⚠️ Temuan: ...]
+    D. Spelling                  : [OK / ⚠️ Temuan: ...]
+    E. Grammar                   : [OK / ⚠️ Temuan: ...]
+    F. Units of Measurement      : [OK / ⚠️ Temuan: ...]
   ── Hasil Pemeriksaan ──
   Temuan         : [jelaskan temuan atau "Tidak ada isu — semua checklist OK"]
   Kategori issue : [daftar kategori, atau "—"]
@@ -553,11 +688,13 @@ Following Instructions:
 
 Localization:
   ── Pemeriksaan Checklist (WAJIB diisi semua) ──
-    A. Punctuation & Formatting : [OK / ⚠️ Temuan: ...]
-    B. Local Perspective        : [OK / ⚠️ Temuan: ...]
-    C. Vocabulary & Natural     : [OK / ⚠️ Temuan: ...]
-    D. Spelling                 : [OK / ⚠️ Temuan: ...]
-    E. Grammar                  : [OK / ⚠️ Temuan: ...]
+    A. Punctuation & Formatting  : [OK / ⚠️ Temuan: ...]
+    B. Unlocalized / Perspective : [OK / ⚠️ Temuan: ...]
+    C. Vocabulary & Awkward      : [OK / ⚠️ Temuan: ...]
+    C2. Phrase or Idiom          : [OK / ⚠️ Temuan: ...]
+    D. Spelling                  : [OK / ⚠️ Temuan: ...]
+    E. Grammar                   : [OK / ⚠️ Temuan: ...]
+    F. Units of Measurement      : [OK / ⚠️ Temuan: ...]
   ── Hasil Pemeriksaan ──
   Temuan         : [jelaskan temuan atau "Tidak ada isu — semua checklist OK"]
   Kategori issue : [daftar kategori, atau "—"]
@@ -640,7 +777,7 @@ Sebelum mengirim output, verifikasi checklist ini secara internal:
 [ ] Apakah justifikasi ditulis HANYA di section "📝 JUSTIFIKASI AKHIR" (bukan di tiap form response)?
 [ ] Apakah evaluasi Localization sudah menggunakan checklist penulisan bahasa target
     (punctuation lokal, perspektif lokal, grammar spesifik bahasa)?
-[ ] Apakah semua 5 item checklist Localization (A–E) sudah terisi di setiap response?
+[ ] Apakah semua 7 item checklist Localization (A, B, C, C2, D, E, F) sudah terisi di setiap response?
 [ ] Apakah keputusan "No issues" dibuktikan dengan checklist (bukan asumsi default)?
 [ ] Apakah localization "Issues present" sudah berdampak ke satisfaction (max SS, bukan HS)?
 ```
