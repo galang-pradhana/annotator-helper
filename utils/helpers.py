@@ -83,27 +83,64 @@ async def send_large_message(
             logger.warning(f"HTML send failed: {e}. Falling back to document.")
 
     # Kirim sebagai file Markdown / text
-    try:
-        if disclaimer:
+    # Langkah 1: kirim disclaimer + footer dulu
+    if disclaimer:
+        try:
+            intro = disclaimer
+            if footer:
+                intro += f"\n(Hasil terlalu panjang, dikirim sebagai file di bawah ini.)\n\n{footer}"
+            await msg_handle.reply_text(intro, parse_mode="HTML", read_timeout=30, write_timeout=30)
+        except Exception as e:
+            logger.warning(f"Disclaimer send failed: {e}")
             try:
-                intro = disclaimer
-                if footer:
-                    intro += f"\n(Hasil terlalu panjang, dikirim sebagai file di bawah ini.)\n\n{footer}"
-                await msg_handle.reply_text(intro, parse_mode="HTML", read_timeout=30, write_timeout=30)
+                await msg_handle.reply_text("⚠️ Hasil evaluasi (terlalu panjang, lihat file di bawah).", read_timeout=30, write_timeout=30)
             except Exception:
-                await msg_handle.reply_text("⚠️ **Hasil Evaluasi:**\nTerlalu panjang, lihat file di bawah.", read_timeout=30, write_timeout=30)
-        
-        file_content = f"{text}"
+                pass
+
+    # Langkah 2: kirim sebagai file dokumen
+    doc_sent = False
+    try:
+        file_content = text
         bio = io.BytesIO(file_content.encode('utf-8'))
+        bio.seek(0)
         bio.name = "hasil_evaluasi.md"
         await msg_handle.reply_document(
             document=bio,
             caption="📄 **Hasil Evaluasi AI** (Buka untuk membaca keseluruhan teks tanpa terpotong).",
             parse_mode="Markdown",
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
+            read_timeout=60,
+            write_timeout=120,
         )
+        doc_sent = True
     except Exception as e:
-        logger.error(f"Failed to send file fallback: {e}")
+        logger.error(f"reply_document failed: {type(e).__name__}: {e}")
+
+    # Langkah 3: fallback — pecah dan kirim sebagai teks biasa
+    if not doc_sent:
+        logger.warning("Dokumen gagal dikirim. Mencoba kirim sebagai teks terpecah...")
+        try:
+            chunks = _split_message(text, chunk_size=3500)
+            for i, chunk in enumerate(chunks):
+                is_last = (i == len(chunks) - 1)
+                await msg_handle.reply_text(
+                    chunk,
+                    read_timeout=30,
+                    write_timeout=30,
+                    reply_markup=reply_markup if is_last else None,
+                )
+        except Exception as e:
+            logger.error(f"Chunked text fallback juga gagal: {type(e).__name__}: {e}")
+            try:
+                await msg_handle.reply_text(
+                    "❌ Gagal mengirim hasil evaluasi ke Telegram.\n"
+                    "Kemungkinan koneksi lambat atau ukuran respons terlalu besar.\n"
+                    "Silakan coba lagi.",
+                    read_timeout=30,
+                    write_timeout=30,
+                )
+            except Exception:
+                pass
 def _parse_evaluation_input(text: str) -> tuple[str, str, str, str] | None:
     """
     Parse input evaluasi dari user.

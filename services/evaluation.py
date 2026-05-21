@@ -262,7 +262,10 @@ async def _run_evaluation_background(
         remaining = 0
 
     # 5. Kirim hasil akhir ke user
-    await status_msg.delete()
+    try:
+        await status_msg.delete()
+    except Exception as e:
+        logger.warning(f"Gagal hapus status_msg: {e}")
     disclaimer_html, footer_html, reply_markup = _build_result_ui(tier, price, remaining, eval_id)
 
     await send_large_message(
@@ -405,7 +408,10 @@ async def _run_vcg_evaluation_background(
         logger.error(f"Deduction/History error: {e}")
         remaining = 0
 
-    await status_msg.delete()
+    try:
+        await status_msg.delete()
+    except Exception as e:
+        logger.warning(f"[VCG] Gagal hapus status_msg: {e}")
     disclaimer_html, footer_html, reply_markup = _build_result_ui(tier, price, remaining, eval_id, is_vcg=True)
 
     await send_large_message(

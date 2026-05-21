@@ -423,18 +423,23 @@ def _map_to_openrouter_model(kie_model_name: str, is_vision: bool = False) -> st
     """Memetakan nama model Kie.ai ke model OpenRouter sesuai preferensi user dan kapabilitas vision."""
     model = (kie_model_name or "").lower()
     
+    # Claude PREMIUM → gunakan Claude 3.5 Sonnet via OpenRouter
+    if "claude" in model:
+        return "anthropic/claude-sonnet-4-5"
+    
     # Jika task butuh baca gambar (Multimodal/VCG)
     if is_vision:
-        if "flash" in model or "basic" in model:
-            return "google/gemini-3.1-flash-lite-preview"
-        return "google/gemini-3-flash-preview-20251217"
+        if "flash" in model:
+            return "google/gemini-flash-1.5"
+        return "google/gemini-pro-1.5"
     
     # Text-only tasks
-    if "flash" in model or "basic" in model:
-        return "deepseek/deepseek-v4-flash"
+    # BASIC tier (gemini-3-flash) → DeepSeek V3 (cepat & murah)
+    if "flash" in model:
+        return "deepseek/deepseek-chat-v3-0324"
         
-    # PRO/PREMIUM tier diarahkan ke DeepSeek V4 Pro
-    return "deepseek/deepseek-v4-pro"
+    # PRO/PREMIUM tier → DeepSeek V3 (versi terbaru)
+    return "deepseek/deepseek-chat-v3-0324"
 
 async def call_openrouter_api(system_prompt: str, user_input: str, model_name: str) -> str:
     api_key = _OR_API_KEY
@@ -442,9 +447,6 @@ async def call_openrouter_api(system_prompt: str, user_input: str, model_name: s
         return "❌ **OpenRouter API Key tidak ditemukan di .env**"
         
     or_model = _map_to_openrouter_model(model_name)
-    
-    if "claude" in (model_name or "").lower():
-        return "❌ **Model Claude sementara dinonaktifkan di fallback OpenRouter.**"
 
     endpoint = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
@@ -508,9 +510,6 @@ async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, ima
         return "❌ **OpenRouter API Key tidak ditemukan di .env**"
         
     or_model = _map_to_openrouter_model(model_name, is_vision=True)
-    
-    if "claude" in (model_name or "").lower():
-        return "❌ **Model Claude sementara dinonaktifkan di fallback OpenRouter.**"
 
     endpoint = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
