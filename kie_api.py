@@ -434,12 +434,11 @@ def _map_to_openrouter_model(kie_model_name: str, is_vision: bool = False) -> st
         return "google/gemini-pro-1.5"
     
     # Text-only tasks
-    # BASIC tier (gemini-3-flash) → DeepSeek V3 (cepat & murah)
-    if "flash" in model:
-        return "deepseek/deepseek-chat-v3-0324"
+    if "flash" in model or "basic" in model:
+        return "deepseek/deepseek-v4-flash"
         
-    # PRO/PREMIUM tier → DeepSeek V3 (versi terbaru)
-    return "deepseek/deepseek-chat-v3-0324"
+    # PRO/PREMIUM tier
+    return "deepseek/deepseek-v4-pro"
 
 async def call_openrouter_api(system_prompt: str, user_input: str, model_name: str) -> str:
     api_key = _OR_API_KEY

@@ -106,8 +106,9 @@ async def send_large_message(
         bio.name = "hasil_evaluasi.md"
         await msg_handle.reply_document(
             document=bio,
-            caption="📄 **Hasil Evaluasi AI** (Buka untuk membaca keseluruhan teks tanpa terpotong).",
-            parse_mode="Markdown",
+            filename="hasil_evaluasi.md",
+            caption="📄 <b>Hasil Evaluasi AI</b> (Buka untuk membaca keseluruhan teks tanpa terpotong).",
+            parse_mode="HTML",
             reply_markup=reply_markup,
             read_timeout=60,
             write_timeout=120,
