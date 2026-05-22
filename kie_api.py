@@ -442,8 +442,8 @@ def _map_to_openrouter_model(kie_model_name: str, is_vision: bool = False) -> st
     # Jika task butuh baca gambar (Multimodal/VCG)
     if is_vision:
         if "flash" in model or "basic" in model:
-            return "google/gemini-flash-1.5"
-        return "google/gemini-pro-1.5"
+            return "google/gemini-2.5-flash"
+        return "google/gemini-2.5-pro"
     
     # Text-only tasks
     if "flash" in model or "basic" in model:
