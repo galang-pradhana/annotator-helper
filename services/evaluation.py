@@ -335,6 +335,8 @@ async def _run_vcg_evaluation_background(
         instruction_ref = "VCG Prompt Rewrite Variety Review"
     elif "MULTI_SIDE" in task_type:
         instruction_ref = "VCG ADM Multi Side"
+    elif task_type == "VCG_EDIT_MODEL_DIRECT_MANIPULATION":
+        instruction_ref = "VCG Edit Model Direct Manipulation"
     else:
         instruction_ref = "VCG Base Creation & Edit Model"
 
@@ -357,6 +359,32 @@ async def _run_vcg_evaluation_background(
         
         user_input_text = (
             f"USER PROMPT & TARGET STYLE: {user_prompt}\n\n"
+            f"GAMBAR YANG DIEVALUASI: {img_labels_str} ({img_count} gambar)\n\n"
+            f"Lakukan evaluasi lengkap sesuai guideline {instruction_ref}."
+        )
+    elif task_type == "VCG_EDIT_MODEL_DIRECT_MANIPULATION":
+        new_images_b64 = {}
+        if "A" in images_b64: new_images_b64["Input Image"] = images_b64["A"]
+        if "B" in images_b64: new_images_b64["Selection Mask"] = images_b64["B"]
+        if "C" in images_b64: new_images_b64["Left Image"] = images_b64["C"]
+        if "D" in images_b64: new_images_b64["Right Image"] = images_b64["D"]
+        if "E" in images_b64: new_images_b64["Left Heatmap"] = images_b64["E"]
+        if "F" in images_b64: new_images_b64["Right Heatmap"] = images_b64["F"]
+        images_b64 = new_images_b64
+
+        img_count = len(images_b64)
+
+        labels = []
+        if "Input Image" in images_b64: labels.append("Input Image")
+        if "Selection Mask" in images_b64: labels.append("Selection Mask")
+        if "Left Image" in images_b64: labels.append("Left Image")
+        if "Right Image" in images_b64: labels.append("Right Image")
+        if "Left Heatmap" in images_b64: labels.append("Left Heatmap")
+        if "Right Heatmap" in images_b64: labels.append("Right Heatmap")
+        img_labels_str = ", ".join(labels)
+        
+        user_input_text = (
+            f"USER PROMPT: {user_prompt}\n\n"
             f"GAMBAR YANG DIEVALUASI: {img_labels_str} ({img_count} gambar)\n\n"
             f"Lakukan evaluasi lengkap sesuai guideline {instruction_ref}."
         )

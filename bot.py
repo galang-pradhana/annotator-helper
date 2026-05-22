@@ -48,6 +48,7 @@ from core.config import (
     COLLECTING_USER_ASK, COLLECTING_RESP_A, COLLECTING_RESP_B, COLLECTING_RESP_C,
     COLLECTING_VCG_PROMPT, COLLECTING_VCG_IMAGE_A, COLLECTING_VCG_IMAGE_B,
     COLLECTING_VCG_IMAGE_C, COLLECTING_VCG_IMAGE_D, COLLECTING_SINGLE_SHOT,
+    COLLECTING_VCG_IMAGE_E, COLLECTING_VCG_IMAGE_F,
     DEPOSIT_ASK_NOMINAL,
 )
 
@@ -68,7 +69,9 @@ from handlers.tasks_vcg import (
     collect_vcg_prompt, vcg_next_to_image_a, collect_vcg_image_a,
     vcg_next_to_image_b, collect_vcg_image_b, vcg_next_to_image_c,
     collect_vcg_image_c, vcg_next_step_after_image_c, vcg_next_to_image_d,
-    collect_vcg_image_d, process_vcg_images,
+    collect_vcg_image_d, vcg_next_step_after_image_d, vcg_next_to_image_e,
+    collect_vcg_image_e, vcg_next_step_after_image_e, vcg_next_to_image_f,
+    collect_vcg_image_f, vcg_next_step_after_image_f, process_vcg_images,
 )
 from handlers.history import history_command, view_history_callback, feedback_callback
 from handlers.standalone import (
@@ -385,9 +388,19 @@ def main():
                 MessageHandler(filters.PHOTO, collect_vcg_image_c),
             ],
             COLLECTING_VCG_IMAGE_D: [
-                CommandHandler("next", process_vcg_images),
+                CommandHandler("next", vcg_next_step_after_image_d),
                 CommandHandler("skip", process_vcg_images),
                 MessageHandler(filters.PHOTO, collect_vcg_image_d),
+            ],
+            COLLECTING_VCG_IMAGE_E: [
+                CommandHandler("next", vcg_next_step_after_image_e),
+                CommandHandler("skip", process_vcg_images),
+                MessageHandler(filters.PHOTO, collect_vcg_image_e),
+            ],
+            COLLECTING_VCG_IMAGE_F: [
+                CommandHandler("next", vcg_next_step_after_image_f),
+                CommandHandler("skip", process_vcg_images),
+                MessageHandler(filters.PHOTO, collect_vcg_image_f),
             ],
         },
         fallbacks=[

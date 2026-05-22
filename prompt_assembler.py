@@ -143,6 +143,12 @@ ASSET_CONFIGS = {
         "prompts": "prompts/ta_intelligent_polls_instructions.md",
         "inputs": "inputs/ta_intelligent_polls_inputs.md",
     },
+    "VCG_EDIT_MODEL_DIRECT_MANIPULATION": {
+        "guidelines": "guidelines/vcg_edit_model_direct_manipulation.md",
+        "forms": "forms/vcg_edit_model_direct_manipulation_forms.md",
+        "prompts": "prompts/vcg_edit_model_direct_manipulation_instructions.md",
+        "inputs": "inputs/vcg_edit_model_direct_manipulation_inputs.md",
+    },
 }
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -499,6 +505,7 @@ _TASK_DISPLAY_NAMES: dict[str, str] = {
     "CYU_ACTION_ITEMS": "CYU — Action Items",
     "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
     "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
+    "VCG_EDIT_MODEL_DIRECT_MANIPULATION": "VCG — Edit Model Direct Manipulation",
 }
 
 

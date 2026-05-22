@@ -270,6 +270,7 @@ async def task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             [InlineKeyboardButton("🎨 ADM - Multi Side (ADM-V2)", callback_data="vcgsub_VCG_ADM_MULTI_SIDE")],
             [InlineKeyboardButton("🖼️ Background Message", callback_data="vcgsub_VCG_BACKGROUND_MESSAGE")],
             [InlineKeyboardButton("✏️ Edit Model", callback_data="vcgsub_VCG_EDIT_MODEL")],
+            [InlineKeyboardButton("✏️ Edit Model Direct Manipulation", callback_data="vcgsub_VCG_EDIT_MODEL_DIRECT_MANIPULATION")],
             [InlineKeyboardButton("✍️ Prompt Rewrite Variety Review", callback_data="vcgsub_VCG_PROMPT_REWRITE")],
             [InlineKeyboardButton("🔙 Kembali", callback_data="back_task")],
         ]
@@ -528,6 +529,15 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
             "Harmfulness: Does the poll contain any harmful content?",
             "Satisfaction Rating & Pairwise Comparison"
         ],
+        "VCG_EDIT_MODEL_DIRECT_MANIPULATION": [
+            "Prompt / Target Style & Original Base Image intent match",
+            "Selection Mask correctness",
+            "Left Image Output evaluation",
+            "Right Image Output evaluation",
+            "Left Image Heatmap evaluation",
+            "Right Image Heatmap evaluation",
+            "Pairwise comparison & final choice"
+        ],
     }
 
     # Human-friendly task display names
@@ -544,6 +554,7 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
         "VCG_ADM_BASE_CREATION": "VCG — ADM - Base Creation Model",
         "VCG_BACKGROUND_MESSAGE": "VCG — Background Message",
         "VCG_EDIT_MODEL": "VCG — Edit Model",
+        "VCG_EDIT_MODEL_DIRECT_MANIPULATION": "VCG — Edit Model Direct Manipulation",
         "VCG_PROMPT_REWRITE": "VCG — Prompt Rewrite Variety Review",
         "WRITING_TOOL_PROOFREAD_V2": "Writing Tool - Proofreading V2",
         "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
@@ -584,7 +595,7 @@ async def confirm_task_callback(update: Update, context: ContextTypes.DEFAULT_TY
         return await back_task_callback(update, context)
 
     # Bersihkan sisa slot gambar VCG dari sesi sebelumnya untuk mencegah state bocor
-    for key in ['vcg_image_a', 'vcg_image_b', 'vcg_image_c', 'vcg_image_d', 'temp_user_ask']:
+    for key in ['vcg_image_a', 'vcg_image_b', 'vcg_image_c', 'vcg_image_d', 'vcg_image_e', 'vcg_image_f', 'temp_user_ask']:
         context.user_data.pop(key, None)
 
     tg_id = update.effective_user.id
@@ -685,6 +696,8 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     context.user_data['vcg_image_b'] = None
     context.user_data['vcg_image_c'] = None
     context.user_data['vcg_image_d'] = None
+    context.user_data['vcg_image_e'] = None
+    context.user_data['vcg_image_f'] = None
     context.user_data['temp_single_shot'] = ""
 
     # Balance check
@@ -710,7 +723,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     main_task = context.user_data.get("SELECTED_TASK", "")
     subtask = final_task_code
     
-    vcg_subtasks = ["VCG_ADM_BASE_CREATION", "VCG_ADM_MULTI_SIDE", "VCG_BACKGROUND_MESSAGE", "VCG_EDIT_MODEL", "VCG_PROMPT_REWRITE"]
+    vcg_subtasks = ["VCG_ADM_BASE_CREATION", "VCG_ADM_MULTI_SIDE", "VCG_BACKGROUND_MESSAGE", "VCG_EDIT_MODEL", "VCG_PROMPT_REWRITE", "VCG_EDIT_MODEL_DIRECT_MANIPULATION"]
     is_vcg = (subtask in vcg_subtasks) or (main_task == "VCG")
 
     if is_vcg:
@@ -741,6 +754,14 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "Format: `[User Prompt] | [Background Message]`\n"
                 "Contoh: `A modern kitchen | Include a coffee maker`\n\n"
                 "Setelah mengirim teks, ketik **/next** untuk lanjut mengirim Gambar A."
+            )
+        elif subtask == "VCG_EDIT_MODEL_DIRECT_MANIPULATION":
+            prompt_msg = (
+                "🚀 **Sesi VCG — Edit Model Direct Manipulation Dimulai**\n\n"
+                "⚠️ *Bot ini hanya menerima input secara bertahap (step-by-step).*\n\n"
+                "📝 **Langkah 1/7** — Kirim **User Prompt**:\n"
+                "Contoh: `Change the car color to red`\n\n"
+                "Setelah mengirim teks, ketik **/next** untuk lanjut mengirim Input Image."
             )
         elif subtask == "VCG_ADM_MULTI_SIDE":
             prompt_msg = (
