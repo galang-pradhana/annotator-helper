@@ -149,6 +149,12 @@ ASSET_CONFIGS = {
         "prompts": "prompts/vcg_edit_model_direct_manipulation_instructions.md",
         "inputs": "inputs/vcg_edit_model_direct_manipulation_inputs.md",
     },
+    "AFM_SAFETY_EVALUATION_AFM4": {
+        "guidelines": "guidelines/afm_safety_evaluation_AFM4.md",
+        "forms": "forms/afm_safety_evaluation_AFM4_forms.md",
+        "prompts": "prompts/afm_safety_evaluation_AFM4_instructions.md",
+        "inputs": "inputs/afm_safety_evaluation_AFM4_inputs.md",
+    },
 }
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -261,6 +267,12 @@ TASK_SELF_AUDIT: dict[str, str] = {
 □ Apakah reasoning essay dalam bahasa Inggris?
 □ Apakah alasan pilihan dalam Bahasa Indonesia (1 kalimat)?
 □ Apakah semua safety flag sudah diperiksa (tidak ada yang terlewat)?
+""",
+    "AFM_SAFETY_EVALUATION_AFM4": """\
+=== AFM4 SELF-AUDIT — LAKUKAN INI SEBELUM OUTPUT ===
+□ Apakah saya mengecek penolakan (refusal) dengan benar?
+□ Apakah semua safety flag dan harm characteristic diperiksa?
+□ Apakah komentar essay diberikan dalam bahasa Inggris dengan singkat dan jelas?
 """,
     "CYU_WEBSITE_TOPIC": """\
 === CYU SELF-AUDIT — LAKUKAN INI SEBELUM OUTPUT ===
@@ -506,6 +518,7 @@ _TASK_DISPLAY_NAMES: dict[str, str] = {
     "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
     "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
     "VCG_EDIT_MODEL_DIRECT_MANIPULATION": "VCG — Edit Model Direct Manipulation",
+    "AFM_SAFETY_EVALUATION_AFM4": "AFM — Safety Evaluation (AFM4)",
 }
 
 

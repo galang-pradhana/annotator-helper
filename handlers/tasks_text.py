@@ -158,7 +158,7 @@ async def next_to_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     # Deteksi task type dari subtask atau main task
     task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
-    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM", "TA_INTELLIGENT_POLLS"]
+    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM", "TA_INTELLIGENT_POLLS", "AFM_SAFETY_EVALUATION_AFM4"]
 
     if task_type in optional_b_tasks:
         msg = (
@@ -188,7 +188,7 @@ async def collect_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def skip_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
-    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM", "TA_INTELLIGENT_POLLS"]
+    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM", "TA_INTELLIGENT_POLLS", "AFM_SAFETY_EVALUATION_AFM4"]
 
     if task_type not in optional_b_tasks:
         await update.message.reply_text(
@@ -202,7 +202,7 @@ async def skip_resp_b(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 async def next_to_resp_c(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
-    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM", "TA_INTELLIGENT_POLLS"]
+    optional_b_tasks = ["CYU_ACTION_ITEMS", "CYU_TOPLINE_SUMMARIZATION", "CYU_WEBSITE_TOPIC", "AFM", "TA_INTELLIGENT_POLLS", "AFM_SAFETY_EVALUATION_AFM4"]
 
     if not context.user_data.get('temp_resp_b') and task_type not in optional_b_tasks:
         await update.message.reply_text(
