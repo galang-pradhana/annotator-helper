@@ -48,7 +48,7 @@ from core.config import (
     COLLECTING_USER_ASK, COLLECTING_RESP_A, COLLECTING_RESP_B, COLLECTING_RESP_C,
     COLLECTING_VCG_PROMPT, COLLECTING_VCG_IMAGE_A, COLLECTING_VCG_IMAGE_B,
     COLLECTING_VCG_IMAGE_C, COLLECTING_VCG_IMAGE_D, COLLECTING_SINGLE_SHOT,
-    COLLECTING_VCG_IMAGE_E, COLLECTING_VCG_IMAGE_F,
+    COLLECTING_VCG_IMAGE_E, COLLECTING_VCG_IMAGE_F, COLLECTING_DYNAMIC_RESP,
     DEPOSIT_ASK_NOMINAL,
 )
 
@@ -64,6 +64,7 @@ from handlers.tasks_text import (
     next_process_single_shot, next_to_resp_a, collect_resp_a,
     next_to_resp_b, collect_resp_b, skip_resp_b, next_to_resp_c,
     collect_resp_c, process_segmented_input, force_done_command,
+    collect_dynamic_resp, next_dynamic_resp, process_dynamic_input,
 )
 from handlers.tasks_vcg import (
     collect_vcg_prompt, vcg_next_to_image_a, collect_vcg_image_a,
@@ -362,6 +363,12 @@ def main():
                 CommandHandler("skip", process_segmented_input),
                 CommandHandler("done", force_done_command),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, collect_resp_c),
+            ],
+            COLLECTING_DYNAMIC_RESP: [
+                CommandHandler("next", next_dynamic_resp),
+                CommandHandler("proceed", process_dynamic_input),
+                CommandHandler("done", force_done_command),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, collect_dynamic_resp),
             ],
             # ── Single-Shot state: PSR & Writing QA ───────────────────────
             COLLECTING_SINGLE_SHOT: [

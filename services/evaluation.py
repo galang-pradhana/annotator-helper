@@ -115,8 +115,21 @@ def _format_user_input(
                 f"6. RESPONSE C:\n{rc or 'N/A'}"
             )
 
+    if task_type == "AFM_SAFETY_EVALUATION_AFM4":
+        user_ask = args[0]
+        responses = args[1:]
+        payload = f"USER ASK:\n{user_ask}"
+        for i, resp in enumerate(responses):
+            if resp and resp.strip():
+                label = chr(65 + i)
+                payload += f"\n\nRESPONSE {label}:\n{resp}"
+        return payload
+
     # Default logic (4 args: user_ask, resp_a, resp_b, resp_c)
-    user_ask, resp_a, resp_b, resp_c = args[:4]
+    args_list = list(args)
+    while len(args_list) < 4:
+        args_list.append("")
+    user_ask, resp_a, resp_b, resp_c = args_list[:4]
 
     # ── KHUSUS: CYU_ACTION_ITEMS ─────────────────────────────────────────
     # Prompt mengharapkan label: INSTRUCTION & ORIGINAL INPUT TEXT, RESPONSE A/B/C (opsional)

@@ -133,6 +133,17 @@ async def next_to_resp_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return COLLECTING_USER_ASK
 
+    if task_code == "AFM_SAFETY_EVALUATION_AFM4":
+        context.user_data['dynamic_resps'] = []
+        context.user_data['current_dynamic_resp'] = ""
+        await update.message.reply_text(
+            "📥 **Langkah 2**: Kirim **Response A**.\n"
+            "Ketik **/next** untuk lanjut ke Response B, C, dst.\n"
+            "Jika sudah selesai, ketik **/proceed** untuk memproses evaluasi.",
+            parse_mode="Markdown",
+        )
+        return COLLECTING_DYNAMIC_RESP
+
     await update.message.reply_text(
         "📥 **Langkah 2/4**: Kirim **Response A**.\n"
         "Setelah selesai, ketik **/next**.",
@@ -224,6 +235,58 @@ async def collect_resp_c(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         context.user_data.get('temp_resp_c', "") + "\n" + text
     ).strip()
     return COLLECTING_RESP_C
+
+
+async def collect_dynamic_resp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = update.message.text
+    context.user_data['current_dynamic_resp'] = (
+        context.user_data.get('current_dynamic_resp', "") + "\n" + text
+    ).strip()
+    return COLLECTING_DYNAMIC_RESP
+
+
+async def next_dynamic_resp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    current = context.user_data.get('current_dynamic_resp', "").strip()
+    if not current:
+        idx = len(context.user_data.get('dynamic_resps', []))
+        label = chr(65 + idx)
+        await update.message.reply_text(
+            f"❌ Anda belum mengirim Response {label}. Silakan kirim teksnya dulu."
+        )
+        return COLLECTING_DYNAMIC_RESP
+
+    # Save current and move to next
+    context.user_data['dynamic_resps'].append(current)
+    context.user_data['current_dynamic_resp'] = ""
+    
+    next_idx = len(context.user_data['dynamic_resps'])
+    next_label = chr(65 + next_idx)
+    
+    await update.message.reply_text(
+        f"📥 **Response {next_label}**.\n"
+        "Ketik **/next** untuk lanjut ke Response berikutnya, atau **/proceed** untuk memproses evaluasi.",
+        parse_mode="Markdown",
+    )
+    return COLLECTING_DYNAMIC_RESP
+
+
+async def process_dynamic_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    current = context.user_data.get('current_dynamic_resp', "").strip()
+    if current:
+        context.user_data['dynamic_resps'].append(current)
+        context.user_data['current_dynamic_resp'] = ""
+        
+    dynamic_resps = context.user_data.get('dynamic_resps', [])
+    if not dynamic_resps:
+        await update.message.reply_text(
+            "❌ Minimal harus ada Response A sebelum diproses."
+        )
+        return COLLECTING_DYNAMIC_RESP
+
+    inputs = [context.user_data.get('temp_user_ask', "")]
+    inputs.extend(dynamic_resps)
+    
+    return await _do_evaluation(update, context, *inputs)
 
 
 async def process_segmented_input(

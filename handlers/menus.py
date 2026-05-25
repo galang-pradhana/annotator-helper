@@ -917,10 +917,11 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "`User Input: [isi]`\n"
                 "`Response A: [isi]`\n"
                 "`Response B: [isi]`\n"
-                "`Response C: [isi — opsional]`\n"
+                "`...`\n"
+                "`Response G: [isi]` (Bisa diisi hingga Response G)\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
-                "Kirim **User Input** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
+                "Kirim **User Input** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst. Akhiri dengan perintah **/proceed** untuk memproses."
             )
         elif final_task_code == "CYU_TOPLINE_SUMMARIZATION":
             task_name = "CYU — Topline Summarization"

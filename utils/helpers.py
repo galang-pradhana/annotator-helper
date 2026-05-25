@@ -246,31 +246,41 @@ def _parse_evaluation_input(text: str) -> tuple[str, str, str, str] | None:
             else:
                 user_ask = first_sec # Fallback jika tidak ada label tapi ada separator
 
-            resp_a = _strip_label(sections[1], "Response A")
-            if not resp_a:
-                resp_a = _strip_label(sections[1], "Response")
+            responses = []
+            for i in range(1, len(sections)):
+                label = chr(65 + i - 1)
+                if i == 1:
+                    resp = _strip_label(sections[1], "Response A")
+                    if not resp:
+                        resp = _strip_label(sections[1], "Response")
+                else:
+                    resp = _strip_label(sections[i], f"Response {label}")
+                responses.append(resp)
             
-            resp_b = _strip_label(sections[2], "Response B") if len(sections) >= 3 else ""
-            resp_c = _strip_label(sections[3], "Response C") if len(sections) >= 4 else ""
-            
-            if user_ask and resp_a:
-                return (user_ask, resp_a, resp_b, resp_c)
+            if user_ask and responses:
+                return (user_ask, *responses)
 
     # Coba format 2: regex-based extraction
-    patterns = {
-        "user_ask": r"(?i)(?:(?:Instruction|User\s*Ask|Original\s*(?:Input\s*)?Text|User\s*Input|User|Conversation|\[CONVERSATION\])\s*:?\s*)([\s\S]*?)(?=Response\s*(?:A|:)|\[RESPONSE\s*A\]|$)",
-        "resp_a": r"(?i)(?:(?:Response\s*(?:A\s*)?|\[RESPONSE\s*A\])\s*:?\s*)([\s\S]*?)(?=Response\s*B\s*:|\[RESPONSE\s*B\]|$)",
-        "resp_b": r"(?i)(?:(?:Response\s*B\s*|\[RESPONSE\s*B\])\s*:?\s*)([\s\S]*?)(?=Response\s*C\s*:|\[RESPONSE\s*C\]|$)",
-        "resp_c": r"(?i)(?:(?:Response\s*C\s*|\[RESPONSE\s*C\])\s*:?\s*)([\s\S]*?)$",
-    }
+    user_ask_pattern = r"(?i)(?:(?:Instruction|User\s*Ask|Original\s*(?:Input\s*)?Text|User\s*Input|User|Conversation|\[CONVERSATION\])\s*:?\s*)([\s\S]*?)(?=Response\s*(?:A|:)|\[RESPONSE\s*A\]|$)"
+    user_ask = _regex_extract(text, user_ask_pattern)
 
-    user_ask = _regex_extract(text, patterns["user_ask"])
-    resp_a = _regex_extract(text, patterns["resp_a"])
-    resp_b = _regex_extract(text, patterns["resp_b"])
-    resp_c = _regex_extract(text, patterns["resp_c"])
+    responses = []
+    for i in range(7):  # Up to G (A,B,C,D,E,F,G)
+        letter = chr(65 + i)
+        next_letter = chr(65 + i + 1)
+        
+        if i == 0:
+            pattern = rf"(?i)(?:(?:Response\s*(?:A\s*)?|\[RESPONSE\s*A\])\s*:?\s*)([\s\S]*?)(?=Response\s*{next_letter}\s*:|\[RESPONSE\s*{next_letter}\]|$)"
+        else:
+            pattern = rf"(?i)(?:(?:Response\s*{letter}\s*|\[RESPONSE\s*{letter}\])\s*:?\s*)([\s\S]*?)(?=Response\s*{next_letter}\s*:|\[RESPONSE\s*{next_letter}\]|$)"
+            
+        resp = _regex_extract(text, pattern)
+        if not resp:
+            break
+        responses.append(resp)
 
-    if user_ask and resp_a:
-        return (user_ask, resp_a, resp_b, resp_c)
+    if user_ask and responses:
+        return (user_ask, *responses)
 
     return None
 
