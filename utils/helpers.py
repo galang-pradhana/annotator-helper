@@ -170,7 +170,7 @@ async def send_large_message(
                 )
             except Exception:
                 pass
-def _parse_evaluation_input(text: str) -> tuple[str, str, str, str] | None:
+def _parse_evaluation_input(text: str, input_list: list = None, task_type: str = "") -> tuple | None:
     """
     Parse input evaluasi dari user.
 
@@ -233,6 +233,51 @@ def _parse_evaluation_input(text: str) -> tuple[str, str, str, str] | None:
     # Valid jika ada original text, query, dan minimal satu response
     if wqa_original and wqa_query and wqa_resp_a:
         return (wqa_original, wqa_selected, wqa_query, wqa_resp_a, wqa_resp_b, wqa_resp_c)
+
+    # ── KHUSUS: TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS ───────────────────
+    # Input: Original text, A1..A4, B1..B4
+    if task_type == "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS" and input_list and "__JUMP__" in input_list:
+        jump_idx = input_list.index("__JUMP__")
+        a_responses = input_list[1:jump_idx]
+        b_responses = input_list[jump_idx+1:]
+        
+        orig = input_list[0] if len(input_list) > 0 else ""
+        a1 = a_responses[0] if len(a_responses) > 0 else ""
+        a2 = a_responses[1] if len(a_responses) > 1 else ""
+        a3 = a_responses[2] if len(a_responses) > 2 else ""
+        a4 = a_responses[3] if len(a_responses) > 3 else ""
+        
+        b1 = b_responses[0] if len(b_responses) > 0 else ""
+        b2 = b_responses[1] if len(b_responses) > 1 else ""
+        b3 = b_responses[2] if len(b_responses) > 2 else ""
+        b4 = b_responses[3] if len(b_responses) > 3 else ""
+        
+        if orig and (a1 or b1):
+            return (orig, a1, a2, a3, a4, b1, b2, b3, b4)
+    cs_patterns = {
+        "orig": r"(?i)(?:Original\s*text\s*:?\s*)([\s\S]*?)(?=(?:Response\s*A1\s*:?)|$)",
+        "a1":   r"(?i)(?:Response\s*A1\s*:?\s*)([\s\S]*?)(?=(?:Response\s*A2\s*:?)|(?:Response\s*A3\s*:?)|(?:Response\s*A4\s*:?)|(?:Response\s*B1\s*:?)|$)",
+        "a2":   r"(?i)(?:Response\s*A2\s*:?\s*)([\s\S]*?)(?=(?:Response\s*A3\s*:?)|(?:Response\s*A4\s*:?)|(?:Response\s*B1\s*:?)|$)",
+        "a3":   r"(?i)(?:Response\s*A3\s*:?\s*)([\s\S]*?)(?=(?:Response\s*A4\s*:?)|(?:Response\s*B1\s*:?)|$)",
+        "a4":   r"(?i)(?:Response\s*A4\s*:?\s*)([\s\S]*?)(?=(?:Response\s*B1\s*:?)|$)",
+        "b1":   r"(?i)(?:Response\s*B1\s*:?\s*)([\s\S]*?)(?=(?:Response\s*B2\s*:?)|(?:Response\s*B3\s*:?)|(?:Response\s*B4\s*:?)|$)",
+        "b2":   r"(?i)(?:Response\s*B2\s*:?\s*)([\s\S]*?)(?=(?:Response\s*B3\s*:?)|(?:Response\s*B4\s*:?)|$)",
+        "b3":   r"(?i)(?:Response\s*B3\s*:?\s*)([\s\S]*?)(?=(?:Response\s*B4\s*:?)|$)",
+        "b4":   r"(?i)(?:Response\s*B4\s*:?\s*)([\s\S]*?)$",
+    }
+
+    cs_orig = _regex_extract(text, cs_patterns["orig"])
+    cs_a1 = _regex_extract(text, cs_patterns["a1"])
+    cs_a2 = _regex_extract(text, cs_patterns["a2"])
+    cs_a3 = _regex_extract(text, cs_patterns["a3"])
+    cs_a4 = _regex_extract(text, cs_patterns["a4"])
+    cs_b1 = _regex_extract(text, cs_patterns["b1"])
+    cs_b2 = _regex_extract(text, cs_patterns["b2"])
+    cs_b3 = _regex_extract(text, cs_patterns["b3"])
+    cs_b4 = _regex_extract(text, cs_patterns["b4"])
+
+    if cs_orig and (cs_a1 or cs_b1):
+        return (cs_orig, cs_a1, cs_a2, cs_a3, cs_a4, cs_b1, cs_b2, cs_b3, cs_b4)
 
     # ── DEFAULT: PR, TC, CYU, AFM ──────────────────────────────────────
     # Coba format 1: split by separator ---

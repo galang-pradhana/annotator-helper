@@ -97,13 +97,18 @@ async def next_process_single_shot(update: Update, context: ContextTypes.DEFAULT
     if parsed:
         return await _do_evaluation(update, context, *parsed)
 
-    # Parser gagal — informasikan field yang mungkin kurang
+    err_msg = "⚠️ **Format tidak dikenali.**"
+    if task_type == "TA_PERSONALIZED_SMART_REPLY":
+        err_msg += "\n\nPastikan ada label: Conversation:, User Profiles:, Response A1:, Response B1:"
+    elif task_type == "TA_WRITING_TOOLS_WRITING_QA":
+        err_msg += "\n\nPastikan ada label: Original Text:, User Query:, Response A:"
+    elif task_type == "TA_INTELLIGENT_POLLS":
+        err_msg += "\n\nPastikan ada label: Conversation:, Response A:, Response B:"
+    elif task_type == "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS":
+        err_msg += "\n\nPastikan ada label: Original text:, Response A1:, Response B1:"
+
     await update.message.reply_text(
-        "⚠️ **Format tidak dikenali.** Pastikan input menggunakan label yang benar, contoh:\n\n"
-        "Untuk PSR:\n"
-        "`Conversation:` / `User Profiles:` / `Response A1:` / `Response B1:`\n\n"
-        "Untuk Writing QA:\n"
-        "`Original Text:` / `User Query:` / `Response A:`\n\n"
+        f"{err_msg}\n\n"
         f"📦 Data terkumpul saat ini: *{len(buf)} karakter*\n"
         "Kirim data tambahan atau perbaiki format, lalu ketik **/next** lagi.",
         parse_mode="Markdown",
@@ -125,6 +130,8 @@ async def next_to_resp_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         first_input_name = "User"
     elif "AFM" in task_code:
         first_input_name = "User Input"
+    elif "CONTEXTUAL_SYNONYMS" in task_code:
+        first_input_name = "Original Text"
 
     if not context.user_data.get('temp_user_ask'):
         await update.message.reply_text(
@@ -140,6 +147,19 @@ async def next_to_resp_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "📥 **Langkah 2**: Kirim **Response A**.\n"
             "Ketik **/next** untuk lanjut ke Response B, C, dst.\n"
             "Jika sudah selesai, ketik **/proceed** untuk memproses evaluasi.",
+            parse_mode="Markdown",
+        )
+        return COLLECTING_DYNAMIC_RESP
+        
+    elif task_code == "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS":
+        context.user_data['dynamic_resps'] = []
+        context.user_data['current_dynamic_resp'] = ""
+        context.user_data['is_response_b'] = False
+        await update.message.reply_text(
+            "📥 **Langkah 2**: Kirim **Response A1**.\n"
+            "Ketik **/next** untuk lanjut ke A2, A3, dst.\n"
+            "Jika sudah selesai Response A, ketik **/jump** untuk mulai mengirim Response B1, B2, dst.\n"
+            "Jika sudah selesai semua, ketik **/proceed** untuk memproses evaluasi.",
             parse_mode="Markdown",
         )
         return COLLECTING_DYNAMIC_RESP
@@ -251,7 +271,7 @@ async def next_dynamic_resp(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         idx = len(context.user_data.get('dynamic_resps', []))
         label = chr(65 + idx)
         await update.message.reply_text(
-            f"❌ Anda belum mengirim Response {label}. Silakan kirim teksnya dulu."
+            f"❌ Anda belum mengirim teks. Silakan kirim teksnya dulu."
         )
         return COLLECTING_DYNAMIC_RESP
 
@@ -259,12 +279,57 @@ async def next_dynamic_resp(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     context.user_data['dynamic_resps'].append(current)
     context.user_data['current_dynamic_resp'] = ""
     
-    next_idx = len(context.user_data['dynamic_resps'])
-    next_label = chr(65 + next_idx)
+    task_code = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    if task_code == "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS":
+        resps = context.user_data['dynamic_resps']
+        if "__JUMP__" in resps:
+            jump_idx = resps.index("__JUMP__")
+            count = len(resps) - jump_idx - 1
+            next_label = f"B{count + 1}"
+        else:
+            count = len(resps)
+            next_label = f"A{count + 1}"
+            
+        msg = f"📥 **Response {next_label}**.\nKetik **/next** untuk lanjut, atau **/jump** jika beralih ke B, atau **/proceed** jika selesai."
+    else:
+        next_idx = len(context.user_data['dynamic_resps'])
+        next_label = chr(65 + next_idx)
+        msg = f"📥 **Response {next_label}**.\nKetik **/next** untuk lanjut, atau **/proceed** untuk memproses evaluasi."
     
     await update.message.reply_text(
-        f"📥 **Response {next_label}**.\n"
-        "Ketik **/next** untuk lanjut ke Response berikutnya, atau **/proceed** untuk memproses evaluasi.",
+        msg,
+        parse_mode="Markdown",
+    )
+    return COLLECTING_DYNAMIC_RESP
+
+
+async def jump_dynamic_resp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    if task_type != "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS":
+        await update.message.reply_text("❌ Perintah **/jump** hanya tersedia untuk task Contextual Synonyms.", parse_mode="Markdown")
+        return COLLECTING_DYNAMIC_RESP
+        
+    current = context.user_data.get('current_dynamic_resp', "").strip()
+    if current:
+        context.user_data['dynamic_resps'].append(current)
+        context.user_data['current_dynamic_resp'] = ""
+        
+    if not context.user_data.get('dynamic_resps'):
+        await update.message.reply_text(
+            "❌ Anda belum mengirim Response A. Silakan kirim teksnya dulu."
+        )
+        return COLLECTING_DYNAMIC_RESP
+        
+    if "__JUMP__" not in context.user_data['dynamic_resps']:
+        context.user_data['dynamic_resps'].append("__JUMP__")
+    
+    context.user_data['is_response_b'] = True
+    
+    await update.message.reply_text(
+        "✅ **Beralih ke Response B.**\n\n"
+        "Silakan kirim Response B1.\n"
+        "Ketik **/next** untuk lanjut ke B2, B3, dst.\n"
+        "Jika sudah selesai semua, ketik **/proceed**.",
         parse_mode="Markdown",
     )
     return COLLECTING_DYNAMIC_RESP
@@ -275,18 +340,46 @@ async def process_dynamic_input(update: Update, context: ContextTypes.DEFAULT_TY
     if current:
         context.user_data['dynamic_resps'].append(current)
         context.user_data['current_dynamic_resp'] = ""
-        
-    dynamic_resps = context.user_data.get('dynamic_resps', [])
-    if not dynamic_resps:
-        await update.message.reply_text(
-            "❌ Minimal harus ada Response A sebelum diproses."
-        )
-        return COLLECTING_DYNAMIC_RESP
 
-    inputs = [context.user_data.get('temp_user_ask', "")]
-    inputs.extend(dynamic_resps)
+    task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
     
-    return await _do_evaluation(update, context, *inputs)
+    if task_type == "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS":
+        resps = context.user_data.get('dynamic_resps', [])
+        orig = context.user_data.get('temp_user_ask', "")
+        
+        if "__JUMP__" in resps:
+            jump_idx = resps.index("__JUMP__")
+            a_responses = resps[:jump_idx]
+            b_responses = resps[jump_idx+1:]
+        else:
+            a_responses = resps
+            b_responses = []
+            
+        if not a_responses:
+            await update.message.reply_text("❌ Data belum lengkap. Anda belum mengirim Response A1.")
+            return COLLECTING_DYNAMIC_RESP
+            
+        if not b_responses:
+            await update.message.reply_text("❌ Data belum lengkap. Anda belum mengirim Response B1. Gunakan perintah **/jump** untuk beralih ke Response B.", parse_mode="Markdown")
+            return COLLECTING_DYNAMIC_RESP
+            
+        a1 = a_responses[0] if len(a_responses) > 0 else ""
+        a2 = a_responses[1] if len(a_responses) > 1 else ""
+        a3 = a_responses[2] if len(a_responses) > 2 else ""
+        a4 = a_responses[3] if len(a_responses) > 3 else ""
+        
+        b1 = b_responses[0] if len(b_responses) > 0 else ""
+        b2 = b_responses[1] if len(b_responses) > 1 else ""
+        b3 = b_responses[2] if len(b_responses) > 2 else ""
+        b4 = b_responses[3] if len(b_responses) > 3 else ""
+        
+        return await _do_evaluation(update, context, orig, a1, a2, a3, a4, b1, b2, b3, b4)
+    else:
+        args = [context.user_data.get('temp_user_ask', "")] + context.user_data.get('dynamic_resps', [])
+        if len(args) < 2:
+            await update.message.reply_text("❌ Data belum lengkap. Anda harus mengirim setidaknya satu Response.")
+            return COLLECTING_DYNAMIC_RESP
+        return await _do_evaluation(update, context, *args)
 
 
 async def process_segmented_input(

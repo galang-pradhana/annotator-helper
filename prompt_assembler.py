@@ -125,6 +125,12 @@ ASSET_CONFIGS = {
         "prompts": "prompts/ta_writing_tools_writing_QA_instructions.md",
         "inputs": "inputs/ta_writing_tools_writing_QA_inputs.md",
     },
+    "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS": {
+        "guidelines": "guidelines/ta_writing_tools_contextual_synonyms.md",
+        "forms": "forms/ta_writing_tools_contextual_synonyms_forms.md",
+        "prompts": "prompts/ta_writing_tools_contextual_synonyms_instructions.md",
+        "inputs": "inputs/ta_writing_tools_contextual_synonyms_inputs.md",
+    },
     "CYU_ACTION_ITEMS": {
         "guidelines": "guidelines/cyu_action_items.md",
         "forms": "forms/cyu_action_items_forms.md",
@@ -337,6 +343,15 @@ TASK_SELF_AUDIT: dict[str, str] = {
 □ Apakah Grading Summary (Excellent/Good/Fair/Poor) konsisten dengan dimensi di atas?
 □ Apakah pairwise comparison di Part III logically derived?
 """,
+    "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS": """\
+=== CONTEXTUAL SYNONYMS SELF-AUDIT — LAKUKAN INI SEBELUM OUTPUT ===
+□ Apakah Q1 (Safety) dan Q2 (Proper Noun) sudah dievaluasi SEBELUM Q3-Q9?
+□ Jika Q1=No atau Q2=Yes, apakah Q3-Q9 di-skip dengan benar?
+□ Apakah Context Preservation benar-benar mempertahankan makna asli (bukan sekadar bersinonim secara umum)?
+□ Apakah Grammatical Integration tidak memerlukan modifikasi kalimat tambahan?
+□ Apakah Word Selection Constraints (Lexeme & Overlap-Free) diperiksa secara ketat?
+□ Apakah pairwise comparison konsisten dengan evaluasi individual per respon?
+""",
     "WRITING_TOOL_PROOFREAD_V2": """\
 === PROOFREADING V2 SELF-AUDIT — LAKUKAN INI SEBELUM OUTPUT ===
 □ Apakah Formality Level original text sudah diidentifikasi dengan benar?
@@ -514,6 +529,7 @@ _TASK_DISPLAY_NAMES: dict[str, str] = {
     "WRITING_TOOL_PROOFREAD_V2": "Writing Tool — Proofreading V2",
     "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
     "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
+    "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS": "TA/TC — Contextual Synonyms",
     "CYU_ACTION_ITEMS": "CYU — Action Items",
     "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
     "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",

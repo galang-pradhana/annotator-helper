@@ -253,6 +253,7 @@ async def task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             [InlineKeyboardButton("🖋️ Writing Tool - Proofreading V2", callback_data="sub_WRITING_TOOL_PROOFREAD_V2")],
             [InlineKeyboardButton("🧠 PSR Personalized Smart Reply", callback_data="sub_TA_PERSONALIZED_SMART_REPLY")],
             [InlineKeyboardButton("📝 Writing QA", callback_data="sub_TA_WRITING_TOOLS_WRITING_QA")],
+            [InlineKeyboardButton("🔄 Contextual Synonyms", callback_data="sub_TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS")],
             [InlineKeyboardButton("📊 Intelligent Polls", callback_data="sub_TA_INTELLIGENT_POLLS")],
             [InlineKeyboardButton("🔙 Kembali", callback_data="back_task")],
         ]
@@ -537,6 +538,18 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
             "Grading Summary per Response (Excellent/Good/Fair/Poor)",
             "Part III — Pairwise Comparison & Observasi Keseluruhan"
         ],
+        "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS": [
+            "Q1. Safety & Appropriateness",
+            "Q2. Proper Noun Replacement Check",
+            "Q3. Context Preservation",
+            "Q4. Grammatical Integration",
+            "Q5. Tone/Register Match",
+            "Q6. Lexeme (Genuinely distinct vocabulary)",
+            "Q7. Overlap-Free (No redundancy)",
+            "Q8. Length Match & Readability",
+            "Q9. Localization Issues",
+            "Overall Insights & Pairwise Comparison"
+        ],
         "TA_INTELLIGENT_POLLS": [
             "Skip Check: Is the prompt/response valid to evaluate?",
             "Proper No Reply: Should a poll be generated based on the conversation?",
@@ -579,6 +592,7 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
         "WRITING_TOOL_PROOFREAD_V2": "Writing Tool - Proofreading V2",
         "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
         "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
+        "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS": "TA/TC — Contextual Synonyms",
         "CYU_ACTION_ITEMS": "CYU — Action Items",
         "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
         "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
@@ -671,6 +685,7 @@ async def tier_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         "WRITING_TOOL_PROOFREAD_V2": "Writing Tool - Proofreading V2",
         "TA_PERSONALIZED_SMART_REPLY": "TA/TC — Personalized Smart Reply",
         "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
+        "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS": "TA/TC — Contextual Synonyms",
         "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
     }
     main_task = context.user_data.get("SELECTED_TASK", "PR")
@@ -720,6 +735,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     context.user_data['vcg_image_e'] = None
     context.user_data['vcg_image_f'] = None
     context.user_data['temp_single_shot'] = ""
+    context.user_data['eval_input_list'] = []
 
     # Balance check
     tg_id = update.effective_user.id
@@ -810,7 +826,8 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     # ── Single-Shot tasks (semua input dlm 1+ pesan, /next untuk proses)
     SINGLE_SHOT_TASKS = {
         "TA_PERSONALIZED_SMART_REPLY", 
-        "TA_WRITING_TOOLS_WRITING_QA"
+        "TA_WRITING_TOOLS_WRITING_QA",
+        "TA_INTELLIGENT_POLLS"
     }
 
     # ── Multi-Step tasks (All-in-One didukung, atau step-by-step via /next)
@@ -823,7 +840,8 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         "TC_PROOFREADING",
         "WRITING_TOOL_PROOFREAD_V2",
         "AFM",
-        "AFM_SAFETY_EVALUATION_AFM4"
+        "AFM_SAFETY_EVALUATION_AFM4",
+        "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS"
     }
 
     final_task_code = subtask or main_task
@@ -877,6 +895,41 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "`Response A: [isi]`\n"
                 "`Response B: [isi]`\n"
                 "`Response C: [isi — opsional]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim bagian per bagian, lalu ketik **/next**."
+            )
+        elif final_task_code == "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS":
+            task_name = "Contextual Synonyms"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One (Cepat)**\n"
+                "Paste format ini dalam **satu pesan**:\n"
+                "`Original text: [isi]`\n"
+                "`Response A1: [isi]`\n"
+                "`Response A2: [isi — opsional]`\n"
+                "`Response A3: [isi — opsional]`\n"
+                "`Response A4: [isi — opsional]`\n"
+                "`Response B1: [isi]`\n"
+                "`Response B2: [isi — opsional]`\n"
+                "`Response B3: [isi — opsional]`\n"
+                "`Response B4: [isi — opsional]`\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim **Original text** saja dulu tanpa label, lalu ketik **/next**. "
+                "Bot akan memandu Anda meminta Response A1, A2, dst. "
+                "Gunakan **/jump** untuk beralih dari Response A ke Response B. "
+                "Setelah selesai semua, ketik **/proceed**."
+            )
+        elif final_task_code == "TA_INTELLIGENT_POLLS":
+            task_name = "Intelligent Polls"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One (Cepat)**\n"
+                "Paste format ini dalam **satu pesan**:\n"
+                "`Conversation: [isi]`\n"
+                "`Response A: [isi]`\n"
+                "`Response B: [isi]`\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
                 "Kirim bagian per bagian, lalu ketik **/next**."

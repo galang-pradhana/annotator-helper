@@ -61,7 +61,7 @@ from handlers.menus import (
 )
 from handlers.tasks_text import (
     _do_evaluation, collect_user_ask, collect_single_shot,
-    next_process_single_shot, next_to_resp_a, collect_resp_a,
+    next_process_single_shot, jump_dynamic_resp, next_to_resp_a, collect_resp_a,
     next_to_resp_b, collect_resp_b, skip_resp_b, next_to_resp_c,
     collect_resp_c, process_segmented_input, force_done_command,
     collect_dynamic_resp, next_dynamic_resp, process_dynamic_input,
@@ -367,6 +367,7 @@ def main():
             COLLECTING_DYNAMIC_RESP: [
                 CommandHandler("next", next_dynamic_resp),
                 CommandHandler("proceed", process_dynamic_input),
+                CommandHandler("jump", jump_dynamic_resp),
                 CommandHandler("done", force_done_command),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, collect_dynamic_resp),
             ],

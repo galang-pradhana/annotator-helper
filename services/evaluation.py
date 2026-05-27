@@ -115,6 +115,20 @@ def _format_user_input(
                 f"6. RESPONSE C:\n{rc or 'N/A'}"
             )
 
+    if len(args) == 9 and task_type == "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS":
+        orig, a1, a2, a3, a4, b1, b2, b3, b4 = args
+        return (
+            f"ORIGINAL TEXT:\n{orig}\n\n"
+            f"RESPONSE A1:\n{a1 or 'N/A'}\n\n"
+            f"RESPONSE A2:\n{a2 or 'N/A'}\n\n"
+            f"RESPONSE A3:\n{a3 or 'N/A'}\n\n"
+            f"RESPONSE A4:\n{a4 or 'N/A'}\n\n"
+            f"RESPONSE B1:\n{b1 or 'N/A'}\n\n"
+            f"RESPONSE B2:\n{b2 or 'N/A'}\n\n"
+            f"RESPONSE B3:\n{b3 or 'N/A'}\n\n"
+            f"RESPONSE B4:\n{b4 or 'N/A'}"
+        )
+
     if task_type == "AFM_SAFETY_EVALUATION_AFM4":
         user_ask = args[0]
         responses = args[1:]
