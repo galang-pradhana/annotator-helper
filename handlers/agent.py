@@ -7,7 +7,7 @@ from rag.retriever import retrieve_guideline_context
 from kie_api import call_ai_engine_with_cost, AGENT_MARKUP
 from utils.helpers import send_large_message
 from core.config import AGENT_CHAT
-from ddgs import DDGS
+from duckduckgo_search import DDGS
 
 logger = logging.getLogger(__name__)
 
