@@ -16,7 +16,7 @@ async def seed_data():
         for p in projects:
             # Check if exists
             statement = select(Project).where(Project.code == p.code)
-            result = await session.exec(statement)
+            result = await session.execute(statement)
             if not result.scalar_one_or_none():
                 session.add(p)
                 print(f"Added project: {p.name}")
@@ -36,7 +36,7 @@ async def seed_data():
         for t in tasks:
             # Check if exists
             statement = select(Task).where(Task.project_code == t.project_code, Task.code == t.code)
-            result = await session.exec(statement)
+            result = await session.execute(statement)
             if not result.scalar_one_or_none():
                 session.add(t)
                 print(f"Added task: {t.name} to {t.project_code}")

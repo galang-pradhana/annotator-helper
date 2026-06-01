@@ -20,7 +20,7 @@ async def get_user_info(session: AsyncSession, tg_id: int) -> User | None:
     """Mengambil data user lengkap."""
     try:
         statement = select(User).where(User.user_id == tg_id)
-        result = await session.exec(statement)
+        result = await session.execute(statement)
         return result.scalar_one_or_none()
     except Exception as e:
         logger.error(f"Database error in get_user_info for {tg_id}: {e}")
@@ -249,7 +249,7 @@ async def get_projects(session: AsyncSession) -> list[Project]:
     """Mengambil semua proyek."""
     try:
         statement = select(Project).order_by(Project.code)
-        result = await session.exec(statement)
+        result = await session.execute(statement)
         return result.scalars().all()
     except Exception as e:
         logger.error(f"Database error in get_projects: {e}")
@@ -260,7 +260,7 @@ async def get_tasks_by_project(session: AsyncSession, project_code: str) -> list
     """Mengambil semua task dalam proyek tertentu."""
     try:
         statement = select(Task).where(Task.project_code == project_code).order_by(Task.id)
-        result = await session.exec(statement)
+        result = await session.execute(statement)
         return result.scalars().all()
     except Exception as e:
         logger.error(f"Database error in get_tasks_by_project for {project_code}: {e}")
@@ -273,18 +273,18 @@ async def get_stats(session: AsyncSession) -> dict:
     """
     try:
         # Total users
-        result = await session.exec(select(func.count(User.user_id)))
+        result = await session.execute(select(func.count(User.user_id)))
         total_users = result.scalar_one_or_none() or 0
 
         # Total balance
-        result = await session.exec(select(func.sum(User.balance)))
+        result = await session.execute(select(func.sum(User.balance)))
         total_balance = result.scalar_one_or_none() or 0
 
         # Hits today (deductions)
         today_start = datetime.now(timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        result = await session.exec(
+        result = await session.execute(
             select(func.count(Transaction.id)).where(
                 Transaction.type == "deduction",
                 Transaction.timestamp >= today_start,
@@ -331,7 +331,7 @@ async def add_evaluation(
         .where(Evaluation.user_id == user_id)
         .order_by(Evaluation.timestamp.desc())
     )
-    result = await session.exec(statement)
+    result = await session.execute(statement)
     existing = result.scalars().all()
     
     if len(existing) >= 5:
@@ -358,7 +358,7 @@ async def get_user_history(session: AsyncSession, user_id: int) -> list[Evaluati
             .order_by(Evaluation.timestamp.desc())
             .limit(5)
         )
-        result = await session.exec(statement)
+        result = await session.execute(statement)
         return list(result.scalars().all())
     except Exception as e:
         logger.error(f"Database error in get_user_history for {user_id}: {e}")
@@ -398,7 +398,7 @@ async def get_recent_fails(session: AsyncSession) -> list[Evaluation]:
             .order_by(Evaluation.timestamp.desc())
             .limit(5)
         )
-        result = await session.exec(statement)
+        result = await session.execute(statement)
         return list(result.scalars().all())
     except Exception as e:
         logger.error(f"Database error in get_recent_fails: {e}")
@@ -409,7 +409,7 @@ async def get_all_user_ids(session: AsyncSession) -> list[int]:
     """Ambil semua ID user untuk broadcast."""
     try:
         statement = select(User.user_id)
-        result = await session.exec(statement)
+        result = await session.execute(statement)
         return list(result.scalars().all())
     except Exception as e:
         logger.error(f"Database error in get_all_user_ids: {e}")
