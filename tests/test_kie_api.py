@@ -63,8 +63,9 @@ async def test_call_kie_ai_api_server_error_retry(mock_sleep, mock_post):
         reply = await call_kie_ai_api("system", "user")
     
     # Assert
-    assert "Server Error 500" in reply
+    assert "Server sedang bermasalah atau maintenance" in reply
     # Should retry up to MAX_RETRIES (2)
+
     assert mock_post.call_count == 2
 
 @pytest.mark.asyncio

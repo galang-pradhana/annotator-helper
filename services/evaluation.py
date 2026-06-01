@@ -8,15 +8,25 @@ from core.config import TIER_MODELS, READY, TIER_DISPLAY_LABELS
 from database import get_session
 import user_service
 from prompt_assembler import assemble_evaluator_prompt
-from kie_api import call_ai_engine, call_ai_engine_multimodal
+from kie_api import call_ai_engine_with_cost, call_ai_engine_multimodal_with_cost, TASK_MARKUP
+from utils.helpers import send_large_message, _retry_telegram_call
 from utils.helpers import send_large_message, _retry_telegram_call
 
 logger = logging.getLogger(__name__)
+
 
 def _calculate_dynamic_price(tier: str, content_len: int = 2000) -> int:
     """
     Menghitung harga dinamis (randomize) berdasarkan tier dan estimasi panjang input.
     Digunakan oleh SEMUA task: PR, TC, CYU, maupun VCG (image-based).
+
+    Ranges:
+    - BASIC:   Short(<1k): 80-90,  Medium(1k-4k): 90-105,  Long(>4k): 105-120
+    - PRO/PREMIUM: Short(<1k): 200-220, Medium(1k-4k): 220-240, Long(>4k): 240-250
+
+    Args:
+        tier: "BASIC", "PRO", atau "PREMIUM"
+        content_len: Total panjang karakter semua input (default 2000 untuk VCG image).
     """
     if tier in ["PREMIUM", "PRO"]:
         if content_len < 1000:
@@ -32,6 +42,7 @@ def _calculate_dynamic_price(tier: str, content_len: int = 2000) -> int:
             return random.randint(90, 105)
         else:
             return random.randint(105, 120)
+
 
 
 def _build_result_ui(
@@ -58,7 +69,6 @@ def _build_result_ui(
     footer_html = (
         f"──────────────────\n"
         f"✅ <b>{label}</b>\n"
-        f"🤖 AI Tier: <b>{tier_label}</b>\n"
         f"💰 Biaya: <b>{price} Poin</b>\n"
         f"💳 Sisa Saldo: <b>{remaining:,} Poin</b>\n"
         f"──────────────────\n"
@@ -205,16 +215,12 @@ async def _run_evaluation_background(
     """Fungsi asinkron di belakang layar: prompt assembly → API call → deduct on success."""
     model = TIER_MODELS.get(tier, "gemini-3.1-pro")
 
-    # Hitung harga dinamis berdasarkan panjang total konten
-    content_len = sum(len(str(a)) for a in args if a)
-    price = _calculate_dynamic_price(tier, content_len)
-
-    # 0. Balance pre-check (double-check)
+    # 0. Balance pre-check (minimum)
     async with get_session() as session:
-        has_balance = await user_service.check_balance(session, tg_id, price)
+        has_balance = await user_service.check_balance(session, tg_id, 5)
     if not has_balance:
         await status_msg.edit_text(
-            f"❌ Saldo tidak mencukupi ({price:,} Poin).\n"
+            "❌ Saldo tidak mencukupi (Minimum 5 Poin).\n"
             "Hubungi Admin untuk top-up."
         )
         return
@@ -240,8 +246,8 @@ async def _run_evaluation_background(
 
     # 3. Panggil API LLM — Refund Logic: TIDAK potong saldo jika gagal
     try:
-        llm_response = await call_ai_engine(
-            evaluator_prompt, user_input_payload, model_override=model
+        llm_response, price = await call_ai_engine_with_cost(
+            system_prompt=evaluator_prompt, user_input=user_input_payload, markup=TASK_MARKUP, model_override=model
         )
     except Exception as e:
         logger.error(f"API call error: {e}")
@@ -336,17 +342,12 @@ async def _run_vcg_evaluation_background(
 ):
     """Background task: evaluasi VCG multimodal."""
     model = TIER_MODELS.get(tier, "gemini-3.1-pro")
-    # VCG: estimasi content_len dari panjang prompt (gambar tidak punya karakter)
-    # Gunakan minimum 2000 agar masuk range Medium → harga wajar
-    content_len = max(len(user_prompt), 2000)
-    price = _calculate_dynamic_price(tier, content_len)
-
-    # Balance pre-check
+    # Balance pre-check (minimum)
     async with get_session() as session:
-        has_balance = await user_service.check_balance(session, tg_id, price)
+        has_balance = await user_service.check_balance(session, tg_id, 5)
     if not has_balance:
         await status_msg.edit_text(
-            f"❌ Saldo tidak mencukupi ({price:,} Poin).\nHubungi Admin untuk top-up."
+            "❌ Saldo tidak mencukupi (Minimum 5 Poin).\nHubungi Admin untuk top-up."
         )
         return
 
@@ -434,10 +435,11 @@ async def _run_vcg_evaluation_background(
 
     # Panggil API multimodal
     try:
-        llm_response = await call_ai_engine_multimodal(
+        llm_response, price = await call_ai_engine_multimodal_with_cost(
             system_prompt=evaluator_prompt,
             user_text=user_input_text,
             images_b64=images_b64,
+            markup=TASK_MARKUP,
             model_override=model,
         )
     except Exception as e:

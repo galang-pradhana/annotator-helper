@@ -3,12 +3,6 @@ import os
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 MAINTENANCE_MODE = False
 
-TIER_PRICING = {
-    "BASIC": 99,
-    "PRO": 225,
-    "PREMIUM": 225,
-}
-
 TIER_MODELS = {
     "BASIC": "gemini-3-flash",
     "PRO": "gemini-3.1-pro",
@@ -16,9 +10,9 @@ TIER_MODELS = {
 }
 
 TIER_DISPLAY_LABELS = {
-    "BASIC": "Basic",
-    "PRO": "Pro",
-    "PREMIUM": "Premium",
+    "BASIC": "BASIC (Gemini 3 Flash)",
+    "PRO": "PRO (Gemini 3.1 Pro)",
+    "PREMIUM": "PREMIUM (Claude 3.5 Sonnet)",
 }
 
 TIER_DISPLAY_RANGES = {
@@ -26,6 +20,7 @@ TIER_DISPLAY_RANGES = {
     "PRO": "200 - 250",
     "PREMIUM": "200 - 250",
 }
+
 
 (
     SELECTING_LANG,
@@ -49,6 +44,8 @@ TIER_DISPLAY_RANGES = {
     COLLECTING_VCG_IMAGE_E,
     COLLECTING_VCG_IMAGE_F,
     COLLECTING_DYNAMIC_RESP,
-) = range(21)
+    SELECTING_MODE,
+    AGENT_CHAT,
+) = range(23)
 
 DEPOSIT_ASK_NOMINAL = 100

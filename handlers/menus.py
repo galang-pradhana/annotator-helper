@@ -40,18 +40,35 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             f"🎉 **Selamat Datang, {username}!**\n\n"
             f"Anda telah terdaftar di **Annotator Pro**.\n"
             f"🎁 Bonus pendaftaran: **{user.balance:,} Poin**\n\n"
-            "Mari mulai setup. Silakan pilih bahasa target Anda."
+            "Mari mulai setup. Silakan pilih opsi menu di bawah ini."
         )
     else:
         msg = (
             f"👋 **Halo kembali, {username}!**\n\n"
             f"💰 Saldo Anda: **{user.balance:,} Poin**\n\n"
-            "Silakan pilih bahasa target Anda."
+            "Silakan pilih opsi menu di bawah ini."
         )
 
     await update.message.reply_text(msg, parse_mode="Markdown")
 
-    # Tampilkan pilihan bahasa
+    # Tampilkan pilihan Mode
+    mode_keyboard = [
+        [
+            InlineKeyboardButton("📝 Mulai Task", callback_data="mode_TASK"),
+            InlineKeyboardButton("🤖 Tanya Guideline", callback_data="mode_AGENT"),
+        ]
+    ]
+    await update.message.reply_text(
+        "🎯 **Apa yang ingin Anda lakukan sekarang?**",
+        reply_markup=InlineKeyboardMarkup(mode_keyboard),
+        parse_mode="Markdown",
+    )
+    return SELECTING_MODE
+
+async def mode_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    context.user_data["APP_MODE"] = "TASK"
     lang_keyboard = [
         [
             InlineKeyboardButton("🇯🇵 Jepang", callback_data="lang_JA"),
@@ -69,13 +86,56 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             InlineKeyboardButton("🇲🇾 Malaysia", callback_data="lang_MS"),
             InlineKeyboardButton("🇸🇦 Arab", callback_data="lang_AR"),
         ],
+        [InlineKeyboardButton("🔙 Kembali", callback_data="back_start")]
     ]
-    await update.message.reply_text(
-        "🌐 **Langkah 1/5** — Pilih bahasa target:",
+    await query.edit_message_text(
+        "🌐 **Langkah 1/4** — Pilih bahasa target:",
         reply_markup=InlineKeyboardMarkup(lang_keyboard),
         parse_mode="Markdown",
     )
     return SELECTING_LANG
+
+async def mode_agent_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    context.user_data["APP_MODE"] = "AGENT"
+    
+    async with get_session() as session:
+        projects = await user_service.get_projects(session)
+    
+    project_keyboard = []
+    row = []
+    for proj in projects:
+        row.append(InlineKeyboardButton(proj.name, callback_data=f"proj_{proj.code}"))
+        if len(row) == 2:
+            project_keyboard.append(row)
+            row = []
+    if row:
+        project_keyboard.append(row)
+    project_keyboard.append([InlineKeyboardButton("🔙 Kembali", callback_data="back_start")])
+    
+    await query.edit_message_text(
+        "📂 **Tanya Guideline** — Pilih Proyek:",
+        reply_markup=InlineKeyboardMarkup(project_keyboard),
+        parse_mode="Markdown",
+    )
+    return SELECTING_PROJECT
+
+async def back_start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    mode_keyboard = [
+        [
+            InlineKeyboardButton("📝 Mulai Task", callback_data="mode_TASK"),
+            InlineKeyboardButton("🤖 Tanya Guideline", callback_data="mode_AGENT"),
+        ]
+    ]
+    await query.edit_message_text(
+        "🎯 **Apa yang ingin Anda lakukan sekarang?**",
+        reply_markup=InlineKeyboardMarkup(mode_keyboard),
+        parse_mode="Markdown",
+    )
+    return SELECTING_MODE
 
 
 async def back_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -86,9 +146,10 @@ async def back_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         [ InlineKeyboardButton("🇺🇸 Inggris", callback_data="lang_EN"), InlineKeyboardButton("🇮🇩 Indonesia", callback_data="lang_ID") ],
         [ InlineKeyboardButton("🇰🇷 Korea", callback_data="lang_KO"), InlineKeyboardButton("🇻🇳 Vietnam", callback_data="lang_VI") ],
         [ InlineKeyboardButton("🇲🇾 Malaysia", callback_data="lang_MS"), InlineKeyboardButton("🇸🇦 Arab", callback_data="lang_AR") ],
+        [ InlineKeyboardButton("🔙 Kembali", callback_data="back_start") ]
     ]
     await query.edit_message_text(
-        "🌐 **Langkah 1/5** — Pilih bahasa target:",
+        "🌐 **Langkah 1/4** — Pilih bahasa target:",
         reply_markup=InlineKeyboardMarkup(lang_keyboard),
         parse_mode="Markdown",
     )
@@ -107,8 +168,12 @@ async def back_proj_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             project_keyboard.append(row)
             row = []
     if row: project_keyboard.append(row)
-    project_keyboard.append([InlineKeyboardButton("🔙 Kembali", callback_data="back_lang")])
-    await query.edit_message_text("📂 **Langkah 2/5** — Pilih Proyek:", reply_markup=InlineKeyboardMarkup(project_keyboard), parse_mode="Markdown")
+    if context.user_data.get("APP_MODE") == "AGENT":
+        project_keyboard.append([InlineKeyboardButton("🔙 Kembali", callback_data="back_start")])
+        await query.edit_message_text("📂 **Tanya Guideline** — Pilih Proyek:", reply_markup=InlineKeyboardMarkup(project_keyboard), parse_mode="Markdown")
+    else:
+        project_keyboard.append([InlineKeyboardButton("🔙 Kembali", callback_data="back_lang")])
+        await query.edit_message_text("📂 **Langkah 2/4** — Pilih Proyek:", reply_markup=InlineKeyboardMarkup(project_keyboard), parse_mode="Markdown")
     return SELECTING_PROJECT
 
 async def back_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -133,7 +198,10 @@ async def back_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             row = []
     if row: task_keyboard.append(row)
     task_keyboard.append([InlineKeyboardButton("🔙 Kembali", callback_data="back_proj")])
-    await query.edit_message_text("🛠️ **Langkah 3/5** — Pilih jenis task:", reply_markup=InlineKeyboardMarkup(task_keyboard), parse_mode="Markdown")
+    if context.user_data.get("APP_MODE") == "AGENT":
+        await query.edit_message_text("🛠️ **Tanya Guideline** — Pilih jenis task:", reply_markup=InlineKeyboardMarkup(task_keyboard), parse_mode="Markdown")
+    else:
+        await query.edit_message_text("🛠️ **Langkah 3/4** — Pilih jenis task:", reply_markup=InlineKeyboardMarkup(task_keyboard), parse_mode="Markdown")
     return SELECTING_TASK
 
 
@@ -175,7 +243,7 @@ async def lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     project_keyboard.append([InlineKeyboardButton("🔙 Kembali", callback_data="back_lang")])
 
     await query.message.reply_text(
-        "📂 **Langkah 2/5** — Pilih Proyek:",
+        "📂 **Langkah 2/4** — Pilih Proyek:",
         reply_markup=InlineKeyboardMarkup(project_keyboard),
         parse_mode="Markdown",
     )
@@ -222,11 +290,18 @@ async def project_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         task_keyboard.append(row)
     task_keyboard.append([InlineKeyboardButton("🔙 Kembali", callback_data="back_proj")])
 
-    await query.message.reply_text(
-        "🛠️ **Langkah 3/5** — Pilih jenis task:",
-        reply_markup=InlineKeyboardMarkup(task_keyboard),
-        parse_mode="Markdown",
-    )
+    if context.user_data.get("APP_MODE") == "AGENT":
+        await query.message.reply_text(
+            "🛠️ **Tanya Guideline** — Pilih jenis task:",
+            reply_markup=InlineKeyboardMarkup(task_keyboard),
+            parse_mode="Markdown",
+        )
+    else:
+        await query.message.reply_text(
+            "🛠️ **Langkah 3/4** — Pilih jenis task:",
+            reply_markup=InlineKeyboardMarkup(task_keyboard),
+            parse_mode="Markdown",
+        )
     logger.info(f"project_callback took {time.time() - start_time:.3f}s")
     return SELECTING_TASK
 
@@ -244,6 +319,19 @@ async def task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     async with get_session() as session:
         await user_service.update_task(session, tg_id, task_code)
+
+    # Intercept for AGENT Mode (Tasks without subtasks like PR)
+    if context.user_data.get("APP_MODE") == "AGENT" and task_code not in ["TA_TC", "VCG", "CYU", "AFM"]:
+        context.user_data["AGENT_TASK"] = task_code
+        await query.edit_message_text(
+            f"🤖 **Tanya Guideline: {task_code}**\n\n"
+            "Halo! Saya adalah AI Assistant untuk Guideline ini.\n"
+            "Silakan ajukan pertanyaan terkait guideline, atau ketik `/cari <keyword>` untuk mencari di internet.\n"
+            "Ketik `/selesai` jika sudah selesai.",
+            parse_mode="Markdown"
+        )
+        return AGENT_CHAT
+
 
     # JALUR KHUSUS TA_TC (Text Composition): Pilih Sub-task
     if task_code == "TA_TC":
@@ -331,6 +419,18 @@ async def subtask_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     subtask_code = query.data[4:]  # strip "sub_" → "TC_MESSAGE_REPLY" atau "TC_PROOFREADING"
     context.user_data["SELECTED_SUBTASK"] = subtask_code
 
+    if context.user_data.get("APP_MODE") == "AGENT":
+        context.user_data["AGENT_TASK"] = subtask_code
+        await query.edit_message_text(
+            f"🤖 **Tanya Guideline: {subtask_code}**\n\n"
+            "Halo! Saya adalah AI Assistant untuk Guideline ini.\n"
+            "Silakan ajukan pertanyaan terkait guideline, atau ketik `/cari <keyword>` untuk mencari di internet.\n"
+            "Ketik `/selesai` jika sudah selesai.",
+            parse_mode="Markdown"
+        )
+        return AGENT_CHAT
+
+
     confirm_text, confirm_markup = _get_confirmation_ui(subtask_code)
     await query.edit_message_text(
         confirm_text,
@@ -367,6 +467,18 @@ async def vcg_subtask_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     vcg_subtask_code = query.data[7:]  # strip "vcgsub_"
     context.user_data["SELECTED_SUBTASK"] = vcg_subtask_code
     context.user_data["VCG_MODEL_LABEL"] = btn_text or label_map.get(query.data, vcg_subtask_code)
+
+    if context.user_data.get("APP_MODE") == "AGENT":
+        context.user_data["AGENT_TASK"] = vcg_subtask_code
+        await query.edit_message_text(
+            f"🤖 **Tanya Guideline: {context.user_data['VCG_MODEL_LABEL']}**\n\n"
+            "Halo! Saya adalah AI Assistant untuk Guideline ini.\n"
+            "Silakan ajukan pertanyaan terkait guideline, atau ketik `/cari <keyword>` untuk mencari di internet.\n"
+            "Ketik `/selesai` jika sudah selesai.",
+            parse_mode="Markdown"
+        )
+        return AGENT_CHAT
+
 
     confirm_text, confirm_markup = _get_confirmation_ui(vcg_subtask_code)
     await query.edit_message_text(
@@ -634,34 +746,20 @@ async def confirm_task_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     tg_id = update.effective_user.id
 
-    # 💎 Langkah 4/5 — Pilih Tier AI (Sekarang untuk semua User)
-    tier_keyboard = [
-        [
-            InlineKeyboardButton("🧊 BASIC", callback_data="tier_BASIC"),
-            InlineKeyboardButton("💎 PRO", callback_data="tier_PRO"),
-        ],
-        [InlineKeyboardButton("🔙 Kembali", callback_data="back_task")]
-    ]
-    await query.edit_message_text(
-        "💎 **Langkah 4/5** — Pilih Tier AI:",
-        reply_markup=InlineKeyboardMarkup(tier_keyboard),
-        parse_mode="Markdown",
-    )
-    return SELECTING_TIER
-
-
-async def tier_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Callback saat Admin memilih tier (BASIC/PREMIUM)."""
-    start_time = time.time()
-    query = update.callback_query
-    await query.answer()
-
-    tier_code = query.data.split("_", 1)[1]  # "tier_BASIC" atau "tier_PREMIUM"
-    tg_id = update.effective_user.id
-    context.user_data["SELECTED_TIER"] = tier_code
-
+    # HARDCODE TIER BASIC
+    context.user_data["SELECTED_TIER"] = "BASIC"
+    
+    if context.user_data.get("APP_MODE") == "AGENT":
+        await query.edit_message_text(
+            "🤖 **Mode Tanya Guideline Aktif!**\n\n"
+            "Anda sekarang dapat bertanya apa saja tentang guideline task ini.\n"
+            "Ketik /stop untuk mengakhiri sesi tanya jawab.",
+            parse_mode="Markdown"
+        )
+        return AGENT_CHAT
+        
     async with get_session() as session:
-        await user_service.update_tier(session, tg_id, tier_code)
+        await user_service.update_tier(session, tg_id, "BASIC")
         user = await user_service.get_user_info(session, tg_id)
 
     lang_code = context.user_data.get("TARGET_LANGUAGE", "ID")
@@ -699,26 +797,23 @@ async def tier_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     else:
         task_display = TASK_LABELS.get(main_task, main_task.replace('_', ' '))
     
-    price = TIER_PRICING.get(tier_code, 99)
     balance = user.balance if user else 0
 
     await query.edit_message_text(
-        f"✅ Tier diset ke: **{tier_code}**\n",
-        parse_mode="Markdown",
-    )
-
-    await query.message.reply_text(
-        f"🎯 **Langkah 5/5** — Setup selesai!\n\n"
+        f"🎯 **Setup selesai!**\n\n"
         f"📋 Bahasa: **{lang_name}**\n"
         f"📂 Proyek: **{(user.selected_project or 'N/A').replace('_', ' ')}**\n"
         f"🛠️ Task: **{task_display}**\n"
-        f"💎 Tier chosen: **{tier_code}**\n"
         f"💳 Saldo: **{balance:,} Poin**\n\n"
         "Ketik **/mulai** untuk memulai sesi evaluasi.",
         parse_mode="Markdown",
     )
-    logger.info(f"tier_callback took {time.time() - start_time:.3f}s")
+    logger.info(f"confirm_task_callback took {time.time() - start_time:.3f}s")
     return READY
+
+async def tier_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """DEPRECATED: Tier selection is now hardcoded to BASIC."""
+    pass
 
 
 async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -740,10 +835,9 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     # Balance check
     tg_id = update.effective_user.id
     tier = context.user_data.get("SELECTED_TIER", "BASIC")
-    price = TIER_PRICING.get(tier, 1000)
-
+    # For Mulai handler, check minimal 5 points
     async with get_session() as session:
-        has_balance = await user_service.check_balance(session, tg_id, price)
+        has_balance = await user_service.check_balance(session, tg_id, 5)
 
     if not has_balance:
         await update.message.reply_text(

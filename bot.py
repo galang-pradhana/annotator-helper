@@ -41,14 +41,14 @@ load_dotenv()
 
 # ── Config & Constants (single source of truth) ───────────────────────────
 from core.config import (
-    ADMIN_ID, MAINTENANCE_MODE,
-    TIER_PRICING, TIER_MODELS, TIER_DISPLAY_LABELS, TIER_DISPLAY_RANGES,
+    ADMIN_ID, MAINTENANCE_MODE, TIER_MODELS,
     SELECTING_LANG, SELECTING_PROJECT, SELECTING_TASK, CONFIRMING_TASK,
     SELECTING_TIER, READY, SELECTING_SUBTASK, SELECTING_VCG_SUBTASK,
     COLLECTING_USER_ASK, COLLECTING_RESP_A, COLLECTING_RESP_B, COLLECTING_RESP_C,
     COLLECTING_VCG_PROMPT, COLLECTING_VCG_IMAGE_A, COLLECTING_VCG_IMAGE_B,
     COLLECTING_VCG_IMAGE_C, COLLECTING_VCG_IMAGE_D, COLLECTING_SINGLE_SHOT,
     COLLECTING_VCG_IMAGE_E, COLLECTING_VCG_IMAGE_F, COLLECTING_DYNAMIC_RESP,
+    SELECTING_MODE, AGENT_CHAT,
     DEPOSIT_ASK_NOMINAL,
 )
 
@@ -58,6 +58,7 @@ from handlers.menus import (
     subtask_callback, vcg_subtask_callback, confirm_task_callback,
     tier_callback, mulai_handler, mulai_outside_ready, cancel_command,
     back_lang_callback, back_proj_callback, back_task_callback,
+    mode_task_callback, mode_agent_callback, back_start_callback,
 )
 from handlers.tasks_text import (
     _do_evaluation, collect_user_ask, collect_single_shot,
@@ -78,10 +79,11 @@ from handlers.history import history_command, view_history_callback, feedback_ca
 from handlers.standalone import (
     status_command, help_command, unknown_command, unknown_command_handler, unknown_message,
 )
-from utils.helpers import _parse_evaluation_input, send_large_message, _split_message
+from handlers.agent import agent_chat_handler, agent_selesai_handler, agent_search_handler
+from utils.helpers import _parse_evaluation_input, send_large_message, _split_message, is_balance_sufficient
 from services.evaluation import (
     _run_evaluation_background, _run_vcg_evaluation_background,
-    _calculate_dynamic_price, _extract_database_content, _format_user_input,
+    _extract_database_content, _format_user_input, _calculate_dynamic_price,
 )
 
 # --- Deduplication Cache (thread-safe with asyncio.Lock) ---
@@ -312,12 +314,18 @@ def main():
             CommandHandler("start", start_command),
         ],
         states={
+            SELECTING_MODE: [
+                CallbackQueryHandler(mode_task_callback, pattern="^mode_TASK$"),
+                CallbackQueryHandler(mode_agent_callback, pattern="^mode_AGENT$"),
+            ],
             SELECTING_LANG: [
                 CallbackQueryHandler(lang_callback, pattern="^lang_"),
+                CallbackQueryHandler(back_start_callback, pattern="^back_start$"),
             ],
             SELECTING_PROJECT: [
                 CallbackQueryHandler(project_callback, pattern="^proj_"),
                 CallbackQueryHandler(back_lang_callback, pattern="^back_lang$"),
+                CallbackQueryHandler(back_start_callback, pattern="^back_start$"),
             ],
             SELECTING_TASK: [
                 CallbackQueryHandler(task_callback, pattern="^task_"),
@@ -409,6 +417,11 @@ def main():
                 CommandHandler("next", vcg_next_step_after_image_f),
                 CommandHandler("skip", process_vcg_images),
                 MessageHandler(filters.PHOTO, collect_vcg_image_f),
+            ],
+            AGENT_CHAT: [
+                CommandHandler("selesai", agent_selesai_handler),
+                CommandHandler("cari", agent_search_handler),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, agent_chat_handler),
             ],
         },
         fallbacks=[

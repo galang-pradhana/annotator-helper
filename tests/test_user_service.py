@@ -8,7 +8,7 @@ async def test_register_new_user(mock_session):
     # Setup
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None
-    mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute
     user, is_new = await register_or_get_user(mock_session, 12345, "newuser")
@@ -26,7 +26,7 @@ async def test_get_existing_user(mock_session):
     existing_user = User(user_id=12345, username="olduser", balance=1000)
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = existing_user
-    mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute
     user, is_new = await register_or_get_user(mock_session, 12345, "olduser")
@@ -43,7 +43,7 @@ async def test_check_balance(mock_session):
     existing_user = User(user_id=12345, balance=100)
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = existing_user
-    mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute & Assert
     assert await check_balance(mock_session, 12345, 50) is True
@@ -55,7 +55,7 @@ async def test_deduct_balance_success(mock_session):
     existing_user = User(user_id=12345, balance=100)
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = existing_user
-    mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute
     new_balance = await deduct_balance(mock_session, 12345, 40, "PR", "model-x")
@@ -72,7 +72,7 @@ async def test_deduct_balance_insufficient(mock_session):
     existing_user = User(user_id=12345, balance=30)
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = existing_user
-    mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute & Assert
     with pytest.raises(ValueError, match="Saldo tidak cukup"):

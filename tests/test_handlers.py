@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from bot import start_command, SELECTING_LANG
+from bot import start_command, SELECTING_MODE
 
 @pytest.mark.asyncio
 @patch("bot.get_session")
@@ -21,7 +21,8 @@ async def test_start_command(mock_user_service, mock_get_session, mock_update, m
     result = await start_command(mock_update, mock_context)
     
     # Assert
-    assert result == SELECTING_LANG
+    assert result == SELECTING_MODE
+
     mock_update.message.reply_text.assert_called()
     
 @pytest.mark.asyncio

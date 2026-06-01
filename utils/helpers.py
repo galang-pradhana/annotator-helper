@@ -58,12 +58,15 @@ async def send_large_message(
     disclaimer: str = "",
     footer: str = "",
     reply_markup: InlineKeyboardMarkup = None,
+    force_text: bool = False,
 ) -> None:
     """
     Mengirim pesan panjang ke user dengan cara:
-    1. Konversi ke HTML untuk kestabilan parsing.
-    2. Jika > 3800 karakter, JANGAN pecah-pecah pesan (menghindari FloodWait & pemotongan tag).
-       Kirim langsung sebagai file Document (.txt/.md) lengkap.
+    1. Jika force_text=True, kirim full text langsung sebagai pesan telegram (dipecah per 3800 karakter jika perlu).
+    2. Jika force_text=False:
+       - Konversi ke HTML untuk kestabilan parsing.
+       - Jika > 3800 karakter, JANGAN pecah-pecah pesan (menghindari FloodWait & pemotongan tag).
+         Kirim langsung sebagai file Document (.txt/.md) lengkap.
     """
     text = text.strip()
     if text.startswith("```"):
@@ -77,6 +80,33 @@ async def send_large_message(
         logger.error("Tidak dapat menemukan message handle untuk mengirim respons.")
         return
 
+    if force_text:
+        # Gabungkan disclaimer + text + footer ke dalam satu pesan utuh jika memungkinkan, atau pecah
+        full_text = ""
+        if disclaimer:
+            full_text += disclaimer + "\n"
+        full_text += text
+        if footer:
+            full_text += "\n" + footer
+            
+        # Gunakan _safe_html untuk kestabilan parsing tanpa crash
+        full_html = _safe_html(full_text)
+        
+        chunks = _split_message(full_html, chunk_size=3800)
+        for i, chunk in enumerate(chunks):
+            if i > 0:
+                await asyncio.sleep(1.0)
+            is_last = (i == len(chunks) - 1)
+            await _retry_telegram_call(
+                msg_handle.reply_text,
+                chunk,
+                parse_mode="HTML",
+                read_timeout=30,
+                write_timeout=30,
+                reply_markup=reply_markup if is_last else None,
+            )
+        return
+
     content_html = _safe_html(text)
     
     full_html = ""
@@ -86,18 +116,7 @@ async def send_large_message(
     if footer:
         full_html += "\n" + footer
 
-    # Opsi A: Jika pendek, kirim sbg HTML. Jika panjang, kirim dokumen instan.
-    if len(full_html) <= 3800:
-        try:
-            await _retry_telegram_call(
-                msg_handle.reply_text,
-                full_html, parse_mode="HTML", reply_markup=reply_markup, read_timeout=30, write_timeout=30
-            )
-            return
-        except Exception as e:
-            logger.warning(f"HTML send failed: {e}. Falling back to document.")
-
-    # Kirim sebagai file Markdown / text
+    # Kirim selalu sebagai file Markdown / text untuk keseragaman output
     # Langkah 1: kirim disclaimer + footer dulu
     if disclaimer:
         try:

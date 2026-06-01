@@ -17,11 +17,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-    tier = user.selected_tier or "BASIC"
-    tier_label = TIER_DISPLAY_LABELS.get(tier, "Basic")
-    price_range = TIER_DISPLAY_RANGES.get(tier, "85 - 120")
-    pro_info = TIER_DISPLAY_RANGES.get("PRO", "200 - 250")
-
     status_text = (
         "📊 **Status Akun Anda**\n\n"
         f"👤 User ID: `{tg_id}`\n"
@@ -29,9 +24,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💰 Saldo: **{user.balance:,} Poin**\n"
         f"🌍 Bahasa: `{user.selected_lang}`\n"
         f"📂 Proyek: `{user.selected_project}`\n"
-        f"🛠️ Task: `{user.selected_task}`\n"
-        f"🤖 AI Tier: **{tier_label}** ({price_range} Poin/hit)\n"
-        f"💎 AI Tier: Pro **({pro_info} Poin/hit)**"
+        f"🛠️ Task: `{user.selected_task}`"
     )
 
     await update.message.reply_text(status_text, parse_mode="Markdown")
