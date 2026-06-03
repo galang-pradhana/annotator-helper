@@ -81,16 +81,16 @@ async def send_large_message(
         return
 
     if force_text:
-        # Gabungkan disclaimer + text + footer ke dalam satu pesan utuh jika memungkinkan, atau pecah
-        full_text = ""
+        # Disclaimer & footer sudah berisi HTML tags (dari agent handler)
+        # HANYA body teks LLM yang perlu di-safe_html
+        body_html = _safe_html(text)
+        
+        full_html = ""
         if disclaimer:
-            full_text += disclaimer + "\n"
-        full_text += text
+            full_html += disclaimer + "\n"
+        full_html += body_html
         if footer:
-            full_text += "\n" + footer
-            
-        # Gunakan _safe_html untuk kestabilan parsing tanpa crash
-        full_html = _safe_html(full_text)
+            full_html += "\n" + footer
         
         chunks = _split_message(full_html, chunk_size=3800)
         for i, chunk in enumerate(chunks):

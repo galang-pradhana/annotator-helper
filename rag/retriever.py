@@ -24,14 +24,16 @@ from rag import vector_store
 logger = logging.getLogger(__name__)
 
 # ── Config ────────────────────────────────────────────────────────────────────
-DEFAULT_TOP_K           = 5
+DEFAULT_TOP_K           = 6
 # Threshold berbeda tergantung metode embedding:
-# - Google (semantic): 0.25 → similarity cukup tinggi, akurat
+# - Google (semantic): 0.15 → diturunkan dari 0.25 agar query Bahasa Indonesia
+#   terhadap dokumen Bahasa Inggris tetap ter-retrieve (perbedaan bahasa menurunkan
+#   similarity secara artifisial meski kontennya relevan)
 # - Fallback (hash)  : 0.05 → hash embedding menghasilkan similarity rendah (~0.05–0.12)
 #   sehingga threshold harus diturunkan agar retrieval tidak selalu gagal
-SIMILARITY_THRESHOLD_SEMANTIC  = 0.25
+SIMILARITY_THRESHOLD_SEMANTIC  = 0.15
 SIMILARITY_THRESHOLD_FALLBACK  = 0.05
-MAX_CONTEXT_CHARS       = 4000   # Batas total karakter konteks yang diinjeksi ke prompt
+MAX_CONTEXT_CHARS       = 6000   # Dinaikkan dari 4000 — top_k=6 butuh lebih banyak ruang
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -104,42 +106,60 @@ async def retrieve_guideline_context(
 ) -> str:
     """
     Pipeline lengkap: embed query → search vector store → format context.
-    
-    Ini adalah fungsi UTAMA yang dipanggil dari prompt_assembler.py.
-    
-    Args:
-        query     : Teks yang akan dicari kemiripannya dengan guideline.
-                    Bisa berupa: task description, user input, atau keyword.
-        task_code : Filter ke task tertentu (e.g. "PR"). None = semua task.
-        top_k     : Jumlah chunk yang diambil.
+    Wrapper backward-compatible di atas retrieve_guideline_context_with_meta.
     
     Returns:
         String context siap diinjeksi ke prompt, atau "" jika tidak ada hasil.
-    
-    Example:
-        context = await retrieve_guideline_context(
-            query="instruction following evaluation criteria scoring",
-            task_code="PR",
-            top_k=5,
-        )
-        # Masukkan ke prompt:
-        # system_prompt = f"{context}\n\n{master_prompt}"
     """
+    result = await retrieve_guideline_context_with_meta(query, task_code, top_k)
+    return result["text"]
+
+
+async def retrieve_guideline_context_with_meta(
+    query: str,
+    task_code: Optional[str] = None,
+    top_k: int = DEFAULT_TOP_K,
+) -> dict:
+    """
+    Pipeline lengkap dengan metadata: embed query → search → format context.
+    
+    Strategi retrieval (bertingkat):
+    1. Coba search dengan filter task_code + threshold normal
+    2. Jika kosong, coba search tanpa filter task_code (cross-task fallback)
+    3. Jika masih kosong, return empty
+    
+    Args:
+        query     : Teks yang akan dicari kemiripannya dengan guideline.
+        task_code : Filter ke task tertentu (e.g. "PR"). None = semua task.
+        top_k     : Jumlah chunk yang diambil (default 6).
+    
+    Returns:
+        dict dengan keys:
+            "text"           : str  — context string untuk prompt
+            "chunk_count"    : int  — jumlah chunk yang ditemukan
+            "top_similarity" : float — similarity tertinggi (0.0 jika kosong)
+            "source"         : str  — "guideline" | "cross_task" | "empty"
+    """
+    empty_result = {
+        "text": "",
+        "chunk_count": 0,
+        "top_similarity": 0.0,
+        "source": "empty",
+    }
+    
     if not query or not query.strip():
-        logger.warning("retrieve_guideline_context: query kosong")
-        return ""
+        logger.warning("retrieve_guideline_context_with_meta: query kosong")
+        return empty_result
     
     # Step 1: Embed query
     query_vec, dim, method = await embed_query(query)
     if not query_vec:
         logger.error("Gagal embed query → skip RAG retrieval")
-        return ""
+        return empty_result
     
     logger.info(f"🔍 Query embedded: dim={dim}, method={method}")
     
     # Step 2: Pilih threshold berdasarkan metode embedding
-    # Hash fallback menghasilkan similarity rendah (~0.05–0.12), sehingga threshold
-    # harus disesuaikan agar retrieval tidak selalu gagal.
     sim_threshold = (
         SIMILARITY_THRESHOLD_SEMANTIC
         if method == "google"
@@ -147,27 +167,51 @@ async def retrieve_guideline_context(
     )
     logger.info(f"🎯 Similarity threshold: {sim_threshold} (embed method: {method})")
     
-    # Step 3: Search
+    # Step 3a: Primary search — dengan filter task_code
     results = await vector_store.search(
         query_embedding=query_vec,
         task_code=task_code,
         top_k=top_k,
         similarity_threshold=sim_threshold,
     )
+    source = "guideline"
+    
+    # Step 3b: Cross-task fallback — jika task-filtered search kosong
+    if not results and task_code:
+        logger.info(
+            f"RAG: 0 hasil untuk task='{task_code}', coba cross-task fallback..."
+        )
+        results = await vector_store.search(
+            query_embedding=query_vec,
+            task_code=None,   # tanpa filter task
+            top_k=top_k,
+            similarity_threshold=sim_threshold,
+        )
+        source = "cross_task"
+        if results:
+            logger.info(
+                f"RAG cross-task: {len(results)} chunk dari berbagai task "
+                f"(top similarity: {results[0]['similarity']:.2f})"
+            )
     
     if not results:
         logger.info(f"RAG: tidak ada chunk relevan untuk query '{query[:60]}...'")
-        return ""
+        return empty_result
     
     logger.info(
-        f"RAG: {len(results)} chunk ditemukan | "
+        f"RAG: {len(results)} chunk ditemukan | source={source} | "
         f"top similarity: {results[0]['similarity']:.2f}"
     )
     
     # Step 4: Format
     context_str = _format_rag_context(results)
     
-    return context_str
+    return {
+        "text": context_str,
+        "chunk_count": len(results),
+        "top_similarity": results[0]["similarity"] if results else 0.0,
+        "source": source,
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════════════

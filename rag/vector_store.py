@@ -346,13 +346,20 @@ async def clear_task(task_code: str) -> int:
 
 
 async def clear_all() -> int:
-    """Hapus semua chunks (full re-index). Gunakan dengan hati-hati!"""
+    """Hapus semua chunks dan drop table (full re-index). Gunakan dengan hati-hati!"""
     conn = None
     try:
         conn = await _get_conn()
-        result = await conn.execute(f"DELETE FROM {TABLE_NAME};")
-        count = int(result.split()[-1])
-        logger.info(f"🗑️ Deleted ALL {count} chunks dari vector store")
+        # Dapatkan jumlah baris sebelum di-drop
+        count = 0
+        try:
+            count_res = await conn.fetchval(f"SELECT COUNT(*) FROM {TABLE_NAME};")
+            count = count_res or 0
+        except Exception:
+            pass
+            
+        await conn.execute(f"DROP TABLE IF EXISTS {TABLE_NAME};")
+        logger.info(f"🗑️ Dropped table '{TABLE_NAME}' (berisi {count} chunks)")
         return count
     except Exception as e:
         logger.error(f"clear_all error: {e}")

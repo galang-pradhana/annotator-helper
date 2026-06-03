@@ -7,7 +7,7 @@ from models import User
 async def test_register_new_user(mock_session):
     # Setup
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = None
+    mock_result.one_or_none.return_value = None
     mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute
@@ -25,7 +25,7 @@ async def test_get_existing_user(mock_session):
     # Setup
     existing_user = User(user_id=12345, username="olduser", balance=1000)
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = existing_user
+    mock_result.one_or_none.return_value = existing_user
     mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute
@@ -42,7 +42,7 @@ async def test_check_balance(mock_session):
     # Setup
     existing_user = User(user_id=12345, balance=100)
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = existing_user
+    mock_result.one_or_none.return_value = existing_user
     mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute & Assert
@@ -54,7 +54,7 @@ async def test_deduct_balance_success(mock_session):
     # Setup
     existing_user = User(user_id=12345, balance=100)
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = existing_user
+    mock_result.one_or_none.return_value = existing_user
     mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute
@@ -71,7 +71,7 @@ async def test_deduct_balance_insufficient(mock_session):
     # Setup
     existing_user = User(user_id=12345, balance=30)
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = existing_user
+    mock_result.one_or_none.return_value = existing_user
     mock_session.exec = AsyncMock(return_value=mock_result)
     
     # Execute & Assert

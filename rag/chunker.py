@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # ── Config ────────────────────────────────────────────────────────────────────
 MAX_CHUNK_CHARS = 1500   # ~375 tokens (1 token ≈ 4 chars)
 MIN_CHUNK_CHARS = 80     # Abaikan chunk terlalu pendek (misal: heading kosong)
-OVERLAP_CHARS   = 150    # Overlap antar chunk untuk konteks
+OVERLAP_CHARS   = 250    # Dinaikkan dari 150 agar konteks tidak terpotong
 
 
 @dataclass
@@ -99,14 +99,25 @@ def _split_long_section(heading: str, text: str) -> list[tuple[str, str]]:
         
         chunk_text = text[start:end]
         
-        # Usahakan potong di akhir kalimat/paragraf
+        # Guard: Jangan memotong di tengah bullet list jika memungkinkan.
+        # Kita lebih suka memotong di '\n\n', lalu sebelum list marker ('\n- ', '\n* ', '\n1. '), baru '\n'.
         if end < len(text):
-            # Cari titik potong terbaik: newline, titik, atau spasi
-            for sep in ['\n\n', '\n', '. ', ' ']:
+            found_cut = False
+            for sep in ['\n\n', '\n- ', '\n* ', '\n1. ', '\n', '. ', ' ']:
                 idx = chunk_text.rfind(sep)
                 if idx > MAX_CHUNK_CHARS * 0.6:  # Minimal 60% terisi
-                    chunk_text = chunk_text[:idx + len(sep)]
+                    # Jika pemisah adalah list marker, kita potong SEBELUM marker tersebut
+                    # agar marker utuh di chunk berikutnya (overlap akan menyertakannya).
+                    if sep in ['\n- ', '\n* ', '\n1. ']:
+                        chunk_text = chunk_text[:idx + 1] # Potong tepat di \n
+                    else:
+                        chunk_text = chunk_text[:idx + len(sep)]
+                    found_cut = True
                     break
+            
+            # Jika tidak menemukan titik potong yang baik, paksa potong di end
+            if not found_cut:
+                chunk_text = text[start:end]
         
         sub_chunks.append((f"{heading} (part {part})", chunk_text.strip()))
         

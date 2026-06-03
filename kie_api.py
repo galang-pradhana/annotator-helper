@@ -113,6 +113,10 @@ async def _call_kie_ai_internal(
     model_name = model_override or _KIE_DEFAULT_MODEL
     timeout    = _KIE_TIMEOUT
 
+    # Normalize model names to the actual API endpoint values
+    if model_name.lower() in ("gemini-3.5-flash", "gemini-3-5-flash"):
+        model_name = "gemini-3-5-flash-openai"
+
     # ── Fallback DUMMY jika API belum diset ──────────────────────────────────
     if not api_url or not api_key:
         logger.warning(
@@ -290,6 +294,10 @@ async def _call_kie_ai_internal_multimodal(
     model_name = model_override or _KIE_DEFAULT_MODEL
     timeout    = _KIE_VCG_TIMEOUT
 
+    # Normalize model names to the actual API endpoint values
+    if model_name.lower() in ("gemini-3.5-flash", "gemini-3-5-flash"):
+        model_name = "gemini-3-5-flash-openai"
+
     # ── Fallback DUMMY ────────────────────────────────────────────────────────
     if not api_url or not api_key:
         logger.warning("KIE multimodal: API belum dikonfigurasi, mode DUMMY.")
@@ -452,7 +460,10 @@ def _map_to_openrouter_model(kie_model_name: str, is_vision: bool = False) -> st
     mapping = {
         # DeepSeek
         "deepseek-flash": "deepseek/deepseek-v4-flash",
-        "deepseek-pro": "deepseek/deepseek-v4-pro"
+        "deepseek-pro": "deepseek/deepseek-v4-pro",
+        "deepseek-v4-pro": "deepseek/deepseek-v4-pro",
+        "deepseek-v3.2": "deepseek/deepseek-v3.2",
+        "deepseek-v3-2": "deepseek/deepseek-v3.2"
     }
 
     # Cek apakah ada mapping khusus

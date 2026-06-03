@@ -20,8 +20,8 @@ async def get_user_info(session: AsyncSession, tg_id: int) -> User | None:
     """Mengambil data user lengkap."""
     try:
         statement = select(User).where(User.user_id == tg_id)
-        result = await session.execute(statement)
-        return result.scalar_one_or_none()
+        result = await session.exec(statement)
+        return result.one_or_none()
     except Exception as e:
         logger.error(f"Database error in get_user_info for {tg_id}: {e}")
         return None

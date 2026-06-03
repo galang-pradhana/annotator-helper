@@ -55,7 +55,13 @@ async def index_all(clear_first: bool = False, task_filter: str = None):
     print("🚀 ANNOTATOR PRO — RAG INDEXER")
     print("=" * 60)
     
-    # ── Step 0: Setup vector store ─────────────────────────────────────────
+    # ── Step 0: Clear jika diminta ────────────────────────────────────────
+    if clear_first:
+        print("\n[!] Menghapus semua data lama (termasuk tabel database)...")
+        deleted = await vector_store.clear_all()
+        print(f"    ✅ Clear selesai")
+        
+    # ── Step 0.5: Setup vector store ────────────────────────────────────────
     print("\n[1/4] Setup pgvector database...")
     dim = get_embedding_dim()
     print(f"      Embedding dimension: {dim}")
@@ -68,12 +74,6 @@ async def index_all(clear_first: bool = False, task_filter: str = None):
         print("  Docker: gunakan image pgvector/pgvector:pg16")
         sys.exit(1)
     print("      ✅ Database siap")
-    
-    # ── Step 0.5: Clear jika diminta ──────────────────────────────────────
-    if clear_first:
-        print("\n[!] Menghapus semua data lama...")
-        deleted = await vector_store.clear_all()
-        print(f"    ✅ Deleted {deleted} chunks")
     
     # ── Step 1: Chunk semua guidelines ────────────────────────────────────
     print("\n[2/4] Chunking guideline files...")

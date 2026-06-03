@@ -1,9 +1,10 @@
+import os
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 from database import get_session
 import user_service
-from rag.retriever import retrieve_guideline_context
+from rag.retriever import retrieve_guideline_context, retrieve_guideline_context_with_meta
 from kie_api import call_ai_engine_with_cost, AGENT_MARKUP
 from utils.helpers import send_large_message
 from core.config import AGENT_CHAT
@@ -11,10 +12,20 @@ from duckduckgo_search import DDGS
 
 logger = logging.getLogger(__name__)
 
+def _get_agent_model() -> str:
+    """Mengembalikan model yang sesuai dengan engine aktif untuk sesi Tanya Guideline."""
+    engine = os.environ.get("ACTIVE_ENGINE", "openrouter").lower()
+    if engine == "openrouter":
+        return "deepseek-v3.2"
+    else:
+        return "gemini-3.5-flash"
+
 async def agent_search_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Mencari informasi di internet via DuckDuckGo dan mensintesiskannya menggunakan LLM."""
     import html
     import asyncio
+    
+    agent_model = _get_agent_model()
     
     query_text = update.message.text.replace('/cari', '').strip()
     if not query_text:
@@ -50,7 +61,7 @@ Kata Kunci Pencarian:"""
             system_prompt="Kamu adalah pencari kata kunci pencarian yang akurat.",
             user_input=search_query_prompt,
             markup=AGENT_MARKUP,
-            model_override="gemini-3-flash"
+            model_override=agent_model
         )
         
         optimized_query = optimized_query_response.strip().replace('"', '').replace("'", "")
@@ -101,7 +112,7 @@ Instruksi Tambahan:
             system_prompt=system_prompt,
             user_input=query_text,
             markup=AGENT_MARKUP,
-            model_override="gemini-3-flash"
+            model_override=agent_model
         )
         
         if llm_response.startswith(("❌", "⚠️")):
@@ -114,7 +125,7 @@ Instruksi Tambahan:
         
         # 6. Deduct balance
         async with get_session() as session:
-            await user_service.deduct_balance(session, tg_id, price, f"Agent Web Search: {target_task}", "gemini-3-flash")
+            await user_service.deduct_balance(session, tg_id, price, f"Agent Web Search: {target_task}", agent_model)
             user = await user_service.get_user_info(session, tg_id)
             current_balance = user.balance
             
@@ -142,12 +153,13 @@ async def agent_selesai_handler(update: Update, context: ContextTypes.DEFAULT_TY
     return ConversationHandler.END
 
 async def agent_chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Menerima pertanyaan user, mencari konteks, dan menjawab dengan LLM."""
+    """Menerima pertanyaan user, mencari konteks dari guideline, dan menjawab dengan LLM."""
+    import html as html_module
+
+    agent_model = _get_agent_model()
+
     query_text = update.message.text
     if query_text.startswith('/'):
-        # Jika user mengetik command (misal /stop atau /start), biarkan fallback handler menangani
-        # Atau bisa juga return ConversationHandler.END tapi akan membersihkan state.
-        # Lebih aman jangan return END di sini, biarkan diproses oleh fallback jika ini command global.
         return AGENT_CHAT
         
     tg_id = update.effective_user.id
@@ -156,7 +168,7 @@ async def agent_chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     target_task = sub_task if sub_task else task_code
     
-    # Pre-check balance minimum untuk Agent (misal 2 poin)
+    # Pre-check balance minimum untuk Agent (2 poin)
     async with get_session() as session:
         has_balance = await user_service.check_balance(session, tg_id, 2)
     if not has_balance:
@@ -166,63 +178,132 @@ async def agent_chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return AGENT_CHAT
         
-    status_msg = await update.message.reply_text("🔍 Sedang mencari informasi di guideline...")
+    status_msg = await update.message.reply_text("🔍 Sedang mencari di dokumen guideline...")
     
     try:
-        # Retrieve context from Supabase Vector Store
-        context_text = await retrieve_guideline_context(query_text, task_code=target_task, top_k=3)
-        if not context_text:
-            context_text = "Tidak ada guideline spesifik yang ditemukan."
+        # ── Step 1: Retrieve context dengan metadata ─────────────────────────
+        rag_result = await retrieve_guideline_context_with_meta(
+            query_text,
+            task_code=target_task,
+            top_k=6,
+        )
+        context_text  = rag_result["text"]
+        chunk_count   = rag_result["chunk_count"]
+        top_sim       = rag_result["top_similarity"]
+        rag_source    = rag_result["source"]   # "guideline" | "cross_task" | "empty"
         
-        # Build prompt — tentukan apakah task ini berbasis visual atau teks
+        # ── Step 2: Build system prompt berdasarkan ketersediaan context ─────
         is_visual_task = target_task.upper().startswith("VCG")
         visual_note = (
-            "Task ini adalah task berbasis GAMBAR/VISUAL (VCG). "
+            "Task ini berbasis GAMBAR/VISUAL (VCG). "
             "Kamu boleh membahas aspek visual, gambar, image quality, dan sejenisnya."
         ) if is_visual_task else (
-            "Task ini adalah task berbasis TEKS (non-visual). "
-            "JANGAN memberikan jawaban yang membahas gambar, visual, image quality, atau aspek visual apapun. "
+            "Task ini berbasis TEKS (non-visual). "
+            "JANGAN membahas gambar, visual, image quality, atau aspek visual apapun. "
             "Fokus hanya pada aspek evaluasi teks, instruksi, konten, dan bahasa."
         )
 
-        system_prompt = f"""Kamu adalah AI Assistant khusus untuk memberikan panduan (guideline) terkait task '{target_task}' di aplikasi Annotator Pro.
+        has_context = bool(context_text)
 
+        if has_context:
+            # ── MODE A: Jawab STRICT dari dokumen guideline ──────────────────
+            system_prompt = f"""Kamu adalah AI Assistant khusus untuk task '{target_task}' di Annotator Pro.
 {visual_note}
 
-Tugas utama kamu adalah menjawab pertanyaan user berdasarkan CONTEXT yang diberikan.
-Jika CONTEXT tidak mengandung informasi spesifik yang dicari namun pertanyaan user masih relevan dengan lingkup task '{target_task}', kamu boleh menjawab menggunakan pengetahuan umum yang relevan HANYA UNTUK DOMAIN TASK INI. Berikan catatan kecil bahwa jawaban berbasis pemahaman umum karena tidak ditemukan di dokumen guideline resmi.
-Jika pertanyaan user di luar lingkup task '{target_task}', tolak dengan sopan.
-Jangan memberikan informasi yang bertentangan dengan konteks.
-Jawab dalam bahasa Indonesia yang profesional dan jelas.
+=== INSTRUKSI WAJIB — BACA DAN PATUHI SEPENUHNYA ===
+1. Jawab HANYA berdasarkan CONTEXT GUIDELINE yang diberikan di bawah.
+2. JANGAN menambahkan informasi dari luar context, sekecil apapun.
+3. JANGAN menjawab pertanyaan yang tidak berkaitan dengan task '{target_task}'.
+4. Jika context tidak membahas pertanyaan secara spesifik, nyatakan dengan jelas:
+   "Berdasarkan dokumen guideline yang tersedia, saya tidak menemukan informasi spesifik 
+   tentang ini. Gunakan /cari [keyword] untuk pencarian internet."
+5. Struktur jawaban:
+   - Gunakan bullet point atau numbered list untuk kejelasan
+   - Sebutkan dari bagian mana informasi berasal (contoh: "Berdasarkan bagian Structural Integrity...")
+   - Jawab dalam Bahasa Indonesia yang profesional
+6. Jangan berikan disclaimer panjang — cukup jawab langsung dan faktual.
 
-CONTEXT:
+=== CONTEXT GUIDELINE (SUMBER KEBENARAN — JANGAN DIABAIKAN) ===
 {context_text}
-"""
+=== END OF CONTEXT ==="""
+        else:
+            # ── MODE B: Context kosong — jawab dengan disclaimer jelas ───────
+            system_prompt = f"""Kamu adalah AI Assistant khusus untuk task '{target_task}' di Annotator Pro.
+{visual_note}
+
+=== INSTRUKSI PENTING ===
+Dokumen guideline spesifik untuk pertanyaan ini TIDAK DITEMUKAN dalam database.
+Kamu HARUS:
+1. Tetap berikan jawaban berdasarkan pengetahuan umum tentang task annotasi/evaluasi AI
+2. WAJIB menyebut di awal jawaban bahwa ini bukan dari dokumen guideline resmi
+3. Sarankan user untuk menggunakan /cari [keyword] untuk informasi lebih akurat
+4. Jangan berikan informasi yang bisa menyesatkan annotator
+
+Jawab dalam Bahasa Indonesia yang profesional."""
         
         await status_msg.edit_text("🤖 Merumuskan jawaban...")
         
-        # Call LLM with Agent Markup (BASIC Tier Hardcoded)
+        # ── Step 3: Panggil LLM ──────────────────────────────────────────────
         llm_response, price = await call_ai_engine_with_cost(
             system_prompt=system_prompt,
             user_input=query_text,
-            markup=AGENT_MARKUP, # Markup x10 (sama dengan task)
-            model_override="gemini-3-flash"
+            markup=AGENT_MARKUP,
+            model_override=agent_model
         )
         
         if llm_response.startswith(("❌", "⚠️")):
             await status_msg.edit_text(f"❌ Gagal mendapatkan jawaban dari LLM.\n\n{llm_response}")
             return AGENT_CHAT
         
-        # Deduct balance
+        # ── Step 4: Deduct balance ───────────────────────────────────────────
         async with get_session() as session:
-            await user_service.deduct_balance(session, tg_id, price, f"Agent Query: {target_task}", "gemini-3-flash")
+            await user_service.deduct_balance(session, tg_id, price, f"Agent Query: {target_task}", agent_model)
             user = await user_service.get_user_info(session, tg_id)
             current_balance = user.balance
             
-        # Send result
+        # ── Step 5: Bangun header & disclaimer berdasarkan hasil RAG ─────────
         await status_msg.delete()
-        disclaimer = f"ℹ️ **Jawaban Guideline ({target_task})** | 💰 Biaya: {price} Poin | 💳 Sisa: {current_balance} Poin\n\n"
-        await send_large_message(update, llm_response, disclaimer=disclaimer, force_text=True)
+
+        if has_context:
+            sim_pct = int(top_sim * 100)
+            if rag_source == "cross_task":
+                source_label = (
+                    f"📚 Sumber: {chunk_count} bagian guideline (lintas task, relevansi: {sim_pct}%)\n"
+                    f"<i>⚠️ Guideline spesifik untuk {html_module.escape(target_task)} tidak ditemukan, menampilkan hasil terdekat.</i>"
+                )
+            else:
+                source_label = (
+                    f"📚 Sumber: {chunk_count} bagian guideline "
+                    f"<b>{html_module.escape(target_task)}</b> (relevansi: {sim_pct}%)"
+                )
+            disclaimer = (
+                f"📋 <b>Jawaban Guideline</b> | {html_module.escape(target_task)}\n"
+                f"{source_label}\n"
+                f"{'─' * 35}\n\n"
+            )
+            footer = (
+                f"\n\n{'─' * 35}\n"
+                f"💰 Biaya: <b>{price} Poin</b> | 💳 Sisa: <b>{current_balance} Poin</b>"
+            )
+        else:
+            disclaimer = (
+                f"⚠️ <b>Jawaban Guideline</b> | {html_module.escape(target_task)}\n"
+                f"📋 Sumber: <i>Pengetahuan umum (guideline tidak ditemukan di database)</i>\n"
+                f"{'─' * 35}\n\n"
+            )
+            footer = (
+                f"\n\n{'─' * 35}\n"
+                f"💡 Untuk info akurat: <code>/cari [keyword]</code>\n"
+                f"💰 Biaya: <b>{price} Poin</b> | 💳 Sisa: <b>{current_balance} Poin</b>"
+            )
+
+        await send_large_message(
+            update,
+            llm_response,
+            disclaimer=disclaimer,
+            footer=footer,
+            force_text=True,
+        )
         
     except Exception as e:
         logger.error(f"Agent Chat Error: {e}")
