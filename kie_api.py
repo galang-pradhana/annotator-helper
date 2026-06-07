@@ -470,6 +470,12 @@ def _map_to_openrouter_model(kie_model_name: str, is_vision: bool = False) -> st
     for key, val in mapping.items():
         if key in model:
             return val
+            
+    # Jika model adalah model basic saat ini (gemini-2.5-pro)
+    if "gemini-2.5-pro" in model:
+        if is_vision:
+            return "google/gemini-2.5-flash"
+        return "deepseek/deepseek-v4-flash"
     
     # Jika task butuh baca gambar (Multimodal/VCG)
     if is_vision:
@@ -718,7 +724,8 @@ async def test_ai_engine(tier: str = "BASIC") -> str:
     """Melakukan tes pengerjaan nyata ke engine yang aktif."""
     engine = os.environ.get("ACTIVE_ENGINE", "openrouter").lower()
     # Petakan tier ke model name yang biasa dipakai di bot
-    model_name = "gemini-3-flash" if tier.upper() == "BASIC" else "gemini-3.1-pro"
+    from core.config import TIER_MODELS
+    model_name = TIER_MODELS.get(tier.upper(), "gemini-2.5-pro")
     
     test_prompt = "Hi, this is a system health check. Please reply with 'READY' if you can hear me."
     

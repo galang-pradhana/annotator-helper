@@ -90,3 +90,12 @@ async def test_call_kie_ai_api_claude_format(mock_post):
     payload = kwargs["json"]
     assert "system" in payload
     assert payload["system"] == "system"
+
+
+def test_map_to_openrouter_model():
+    from kie_api import _map_to_openrouter_model
+    # Test text mapping for basic tier gemini-2.5-pro
+    assert _map_to_openrouter_model("gemini-2.5-pro", is_vision=False) == "deepseek/deepseek-v4-flash"
+    # Test vision mapping for basic tier gemini-2.5-pro
+    assert _map_to_openrouter_model("gemini-2.5-pro", is_vision=True) == "google/gemini-2.5-flash"
+
