@@ -253,7 +253,7 @@ async def next_to_resp_c(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         msg = (
             "📥 **Langkah 4/4**: Kirim **Response C** (Opsional).\n"
-            "Ketik **/next** untuk memproses, atau **/skip** jika tidak ada Response C."
+            "Ketik **/next** atau **/proceed** untuk memproses, atau **/skip** jika tidak ada Response C."
         )
     await update.message.reply_text(msg, parse_mode="Markdown")
     return COLLECTING_RESP_C

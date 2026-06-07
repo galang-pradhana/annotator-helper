@@ -369,6 +369,7 @@ def main():
             COLLECTING_RESP_C: [
                 CommandHandler("next", next_to_d_or_evaluate),
                 CommandHandler("skip", process_segmented_input),
+                CommandHandler("proceed", process_segmented_input),
                 CommandHandler("done", force_done_command),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, collect_resp_c),
             ],

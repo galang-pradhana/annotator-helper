@@ -4,13 +4,13 @@ ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 MAINTENANCE_MODE = False
 
 TIER_MODELS = {
-    "BASIC": "gemini-3-flash",
+    "BASIC": "gemini-2.5-pro",
     "PRO": "gemini-3.1-pro",
     "PREMIUM": "claude-sonnet-4-6",
 }
 
 TIER_DISPLAY_LABELS = {
-    "BASIC": "BASIC (Gemini 3 Flash)",
+    "BASIC": "BASIC (Gemini 2.5 Pro)",
     "PRO": "PRO (Gemini 3.1 Pro)",
     "PREMIUM": "PREMIUM (Claude 3.5 Sonnet)",
 }
