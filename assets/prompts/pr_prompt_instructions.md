@@ -109,20 +109,32 @@ Sesi dimulai HANYA setelah user mengirim `/mulai` diikuti data evaluasi.
 
 [RESPONSE C] ← opsional
 ...isi response C...
+
+[RESPONSE D] ← opsional
+...isi response D...
+
+[RESPONSE E] ← opsional
+...isi response E...
+
+[RESPONSE F] ← opsional
+...isi response F...
 ```
 
 ### Alur Kerja Wajib (Jalankan Berurutan)
 ```
-Step 0 → Jangan menyapa. Jangan minta input lagi. Langsung proses.
-Step 1 → Pahami inti dan maksud semua input (user ask, response A, B, C) secara internal.
-         DILARANG menampilkan terjemahan verbatim. Proses pemahaman dilakukan di dalam saja.
-Step 2 → Isi ANALISIS USER ASK: User Intent, CORE, MODIFIER.
-         ⚠️ User Intent WAJIB diisi — tidak boleh dilewati atau dikosongkan.
-Step 3 → Evaluasi Response A secara independen (4 dimensi + satisfaction).
-Step 4 → Evaluasi Response B secara independen (4 dimensi + satisfaction).
-Step 5 → Evaluasi Response C jika ada (4 dimensi + satisfaction).
-Step 6 → Tulis JUSTIFIKASI AKHIR (satu paragraf BI + satu paragraf EN).
-Step 7 → Tampilkan pesan comparison standar, lalu BERHENTI.
+Step 0  → Jangan menyapa. Jangan minta input lagi. Langsung proses.
+Step 1  → Pahami inti dan maksud semua input (user ask, response A–F) secara internal.
+           DILARANG menampilkan terjemahan verbatim. Proses pemahaman dilakukan di dalam saja.
+Step 2  → Isi ANALISIS USER ASK: User Intent, CORE, MODIFIER.
+           ⚠️ User Intent WAJIB diisi — tidak boleh dilewati atau dikosongkan.
+Step 3  → Evaluasi Response A secara independen (4 dimensi + satisfaction).
+Step 4  → Evaluasi Response B secara independen (4 dimensi + satisfaction).
+Step 5  → Evaluasi Response C jika ada (4 dimensi + satisfaction).
+Step 6  → Evaluasi Response D jika ada (4 dimensi + satisfaction).
+Step 7  → Evaluasi Response E jika ada (4 dimensi + satisfaction).
+Step 8  → Evaluasi Response F jika ada (4 dimensi + satisfaction).
+Step 9  → Tulis JUSTIFIKASI AKHIR (satu paragraf BI + satu paragraf EN).
+Step 10 → Tampilkan pesan comparison standar, lalu BERHENTI.
 ```
 
 ---
@@ -743,6 +755,207 @@ How satisfying is the response?
 [a. ☹️😔 Highly Unsatisfying / b. 🤨 Slightly Unsatisfying / c. 🙂 Slightly Satisfying / d. 😍 Highly Satisfying]
 
 ═══════════════════════════════════════════
+🅳 EVALUASI RESPONSE D  ← hapus seluruh section ini jika tidak ada Response D
+═══════════════════════════════════════════
+
+── ANALISIS PENALARAN ──
+
+Following Instructions:
+  CORE terpenuhi  : [Ya / Tidak / Sebagian — jelaskan]
+  MODIFIER terpenuhi: [Ya / Tidak / Sebagian — jelaskan]
+  Keputusan       : [Fully Following / Partially Following / Not Following]
+
+Localization:
+  ── Pemeriksaan Checklist (WAJIB diisi semua) ──
+    A. Punctuation & Formatting  : [OK / ⚠️ Temuan: ...]
+    B. Unlocalized / Perspective : [OK / ⚠️ Temuan: ...]
+    C. Vocabulary & Awkward      : [OK / ⚠️ Temuan: ...]
+    C2. Phrase or Idiom          : [OK / ⚠️ Temuan: ...]
+    D. Spelling                  : [OK / ⚠️ Temuan: ...]
+    E. Grammar                   : [OK / ⚠️ Temuan: ...]
+    F. Units of Measurement      : [OK / ⚠️ Temuan: ...]
+  ── Hasil Pemeriksaan ──
+  Temuan         : [jelaskan temuan atau "Tidak ada isu — semua checklist OK"]
+  Kategori issue : [daftar kategori, atau "—"]
+  Keputusan      : [No issues / Issues present]
+
+Concision:
+  Temuan         : [jelaskan]
+  Keputusan      : [Good / Acceptable / Bad]
+  Jika Bad/Acceptable: [It could have been made shorter / It could have been made longer]
+
+Truthfulness:
+  Klaim Primer   : [daftar klaim primer dan status akurasinya]
+  Klaim Sekunder : [daftar klaim sekunder dan status akurasinya, atau "—"]
+  Keputusan      : [Truthful / Partially Truthful / Not Truthful]
+
+Satisfaction Logic:
+  Penalti aktif  : [daftar penalti yang berlaku, atau "Tidak ada penalti"]
+  Keputusan      : [Highly Satisfying / Slightly Satisfying / Slightly Unsatisfying / Highly Unsatisfying]
+
+── FORM EVALUASI AKHIR ──
+
+Does the response follow the user's instructions?
+[a. Not following / b. Partially following / c. Fully following]
+
+Are there any localization issues in the response?
+[a. Yes (issues present) / b. No (no issues)]
+[Jika Yes:]
+Which localization issues are present? Select all that apply.
+[✅ Unlocalized information] [✅ Overly-localized content] [✅ Spelling] [✅ Tone]
+[✅ Non-local perspective] [✅ Vocabulary] [✅ Awkward or unnatural writing]
+[✅ Formatting & punctuation] [✅ Grammar] [✅ Phrase or idiom]
+[✅ Units of measurement] [✅ Wrong language] [✅ Other]
+Jelaskan pilihanmu berdasarkan guideline {{TARGET_LANGUAGE}}:
+[penjelasan dalam Bahasa Indonesia]
+
+How concise is the response?
+[a. Bad / b. Acceptable / c. Good]
+[Jika Bad atau Acceptable:]
+How would you describe the response?
+[a. It could have been made shorter / b. It could have been made longer]
+
+How truthful is the response?
+[a. Not Truthful / b. Partially Truthful / c. Truthful]
+
+How satisfying is the response?
+[a. ☹️😔 Highly Unsatisfying / b. 🤨 Slightly Unsatisfying / c. 🙂 Slightly Satisfying / d. 😍 Highly Satisfying]
+
+═══════════════════════════════════════════
+🅴 EVALUASI RESPONSE E  ← hapus seluruh section ini jika tidak ada Response E
+═══════════════════════════════════════════
+
+── ANALISIS PENALARAN ──
+
+Following Instructions:
+  CORE terpenuhi  : [Ya / Tidak / Sebagian — jelaskan]
+  MODIFIER terpenuhi: [Ya / Tidak / Sebagian — jelaskan]
+  Keputusan       : [Fully Following / Partially Following / Not Following]
+
+Localization:
+  ── Pemeriksaan Checklist (WAJIB diisi semua) ──
+    A. Punctuation & Formatting  : [OK / ⚠️ Temuan: ...]
+    B. Unlocalized / Perspective : [OK / ⚠️ Temuan: ...]
+    C. Vocabulary & Awkward      : [OK / ⚠️ Temuan: ...]
+    C2. Phrase or Idiom          : [OK / ⚠️ Temuan: ...]
+    D. Spelling                  : [OK / ⚠️ Temuan: ...]
+    E. Grammar                   : [OK / ⚠️ Temuan: ...]
+    F. Units of Measurement      : [OK / ⚠️ Temuan: ...]
+  ── Hasil Pemeriksaan ──
+  Temuan         : [jelaskan temuan atau "Tidak ada isu — semua checklist OK"]
+  Kategori issue : [daftar kategori, atau "—"]
+  Keputusan      : [No issues / Issues present]
+
+Concision:
+  Temuan         : [jelaskan]
+  Keputusan      : [Good / Acceptable / Bad]
+  Jika Bad/Acceptable: [It could have been made shorter / It could have been made longer]
+
+Truthfulness:
+  Klaim Primer   : [daftar klaim primer dan status akurasinya]
+  Klaim Sekunder : [daftar klaim sekunder dan status akurasinya, atau "—"]
+  Keputusan      : [Truthful / Partially Truthful / Not Truthful]
+
+Satisfaction Logic:
+  Penalti aktif  : [daftar penalti yang berlaku, atau "Tidak ada penalti"]
+  Keputusan      : [Highly Satisfying / Slightly Satisfying / Slightly Unsatisfying / Highly Unsatisfying]
+
+── FORM EVALUASI AKHIR ──
+
+Does the response follow the user's instructions?
+[a. Not following / b. Partially following / c. Fully following]
+
+Are there any localization issues in the response?
+[a. Yes (issues present) / b. No (no issues)]
+[Jika Yes:]
+Which localization issues are present? Select all that apply.
+[✅ Unlocalized information] [✅ Overly-localized content] [✅ Spelling] [✅ Tone]
+[✅ Non-local perspective] [✅ Vocabulary] [✅ Awkward or unnatural writing]
+[✅ Formatting & punctuation] [✅ Grammar] [✅ Phrase or idiom]
+[✅ Units of measurement] [✅ Wrong language] [✅ Other]
+Jelaskan pilihanmu berdasarkan guideline {{TARGET_LANGUAGE}}:
+[penjelasan dalam Bahasa Indonesia]
+
+How concise is the response?
+[a. Bad / b. Acceptable / c. Good]
+[Jika Bad atau Acceptable:]
+How would you describe the response?
+[a. It could have been made shorter / b. It could have been made longer]
+
+How truthful is the response?
+[a. Not Truthful / b. Partially Truthful / c. Truthful]
+
+How satisfying is the response?
+[a. ☹️😔 Highly Unsatisfying / b. 🤨 Slightly Unsatisfying / c. 🙂 Slightly Satisfying / d. 😍 Highly Satisfying]
+
+═══════════════════════════════════════════
+🅵 EVALUASI RESPONSE F  ← hapus seluruh section ini jika tidak ada Response F
+═══════════════════════════════════════════
+
+── ANALISIS PENALARAN ──
+
+Following Instructions:
+  CORE terpenuhi  : [Ya / Tidak / Sebagian — jelaskan]
+  MODIFIER terpenuhi: [Ya / Tidak / Sebagian — jelaskan]
+  Keputusan       : [Fully Following / Partially Following / Not Following]
+
+Localization:
+  ── Pemeriksaan Checklist (WAJIB diisi semua) ──
+    A. Punctuation & Formatting  : [OK / ⚠️ Temuan: ...]
+    B. Unlocalized / Perspective : [OK / ⚠️ Temuan: ...]
+    C. Vocabulary & Awkward      : [OK / ⚠️ Temuan: ...]
+    C2. Phrase or Idiom          : [OK / ⚠️ Temuan: ...]
+    D. Spelling                  : [OK / ⚠️ Temuan: ...]
+    E. Grammar                   : [OK / ⚠️ Temuan: ...]
+    F. Units of Measurement      : [OK / ⚠️ Temuan: ...]
+  ── Hasil Pemeriksaan ──
+  Temuan         : [jelaskan temuan atau "Tidak ada isu — semua checklist OK"]
+  Kategori issue : [daftar kategori, atau "—"]
+  Keputusan      : [No issues / Issues present]
+
+Concision:
+  Temuan         : [jelaskan]
+  Keputusan      : [Good / Acceptable / Bad]
+  Jika Bad/Acceptable: [It could have been made shorter / It could have been made longer]
+
+Truthfulness:
+  Klaim Primer   : [daftar klaim primer dan status akurasinya]
+  Klaim Sekunder : [daftar klaim sekunder dan status akurasinya, atau "—"]
+  Keputusan      : [Truthful / Partially Truthful / Not Truthful]
+
+Satisfaction Logic:
+  Penalti aktif  : [daftar penalti yang berlaku, atau "Tidak ada penalti"]
+  Keputusan      : [Highly Satisfying / Slightly Satisfying / Slightly Unsatisfying / Highly Unsatisfying]
+
+── FORM EVALUASI AKHIR ──
+
+Does the response follow the user's instructions?
+[a. Not following / b. Partially following / c. Fully following]
+
+Are there any localization issues in the response?
+[a. Yes (issues present) / b. No (no issues)]
+[Jika Yes:]
+Which localization issues are present? Select all that apply.
+[✅ Unlocalized information] [✅ Overly-localized content] [✅ Spelling] [✅ Tone]
+[✅ Non-local perspective] [✅ Vocabulary] [✅ Awkward or unnatural writing]
+[✅ Formatting & punctuation] [✅ Grammar] [✅ Phrase or idiom]
+[✅ Units of measurement] [✅ Wrong language] [✅ Other]
+Jelaskan pilihanmu berdasarkan guideline {{TARGET_LANGUAGE}}:
+[penjelasan dalam Bahasa Indonesia]
+
+How concise is the response?
+[a. Bad / b. Acceptable / c. Good]
+[Jika Bad atau Acceptable:]
+How would you describe the response?
+[a. It could have been made shorter / b. It could have been made longer]
+
+How truthful is the response?
+[a. Not Truthful / b. Partially Truthful / c. Truthful]
+
+How satisfying is the response?
+[a. ☹️😔 Highly Unsatisfying / b. 🤨 Slightly Unsatisfying / c. 🙂 Slightly Satisfying / d. 😍 Highly Satisfying]
+
+═══════════════════════════════════════════
 📝 JUSTIFIKASI AKHIR
 ═══════════════════════════════════════════
 
@@ -775,6 +988,8 @@ Sebelum mengirim output, verifikasi checklist ini secara internal:
 [ ] Apakah "User Intent" di ANALISIS USER ASK sudah terisi (tidak kosong/hilang)?
 [ ] Apakah tag <database> dan </database> sudah terpasang dengan benar?
 [ ] Apakah justifikasi ditulis HANYA di section "📝 JUSTIFIKASI AKHIR" (bukan di tiap form response)?
+[ ] Apakah response D, E, F (jika dikirim user) sudah dievaluasi di section 🅳/🅴/🅵 masing-masing?
+[ ] Apakah section 🅳/🅴/🅵 sudah DIHAPUS jika response D/E/F tidak ada dalam input?
 [ ] Apakah evaluasi Localization sudah menggunakan checklist penulisan bahasa target
     (punctuation lokal, perspektif lokal, grammar spesifik bahasa)?
 [ ] Apakah semua 7 item checklist Localization (A, B, C, C2, D, E, F) sudah terisi di setiap response?

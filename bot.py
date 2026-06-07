@@ -64,7 +64,7 @@ from handlers.tasks_text import (
     _do_evaluation, collect_user_ask, collect_single_shot,
     next_process_single_shot, jump_dynamic_resp, next_to_resp_a, collect_resp_a,
     next_to_resp_b, collect_resp_b, skip_resp_b, next_to_resp_c,
-    collect_resp_c, process_segmented_input, force_done_command,
+    collect_resp_c, next_to_d_or_evaluate, process_segmented_input, force_done_command,
     collect_dynamic_resp, next_dynamic_resp, process_dynamic_input,
 )
 from handlers.tasks_vcg import (
@@ -367,7 +367,7 @@ def main():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, collect_resp_b),
             ],
             COLLECTING_RESP_C: [
-                CommandHandler("next", process_segmented_input),
+                CommandHandler("next", next_to_d_or_evaluate),
                 CommandHandler("skip", process_segmented_input),
                 CommandHandler("done", force_done_command),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, collect_resp_c),

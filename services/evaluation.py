@@ -101,6 +101,23 @@ def _format_user_input(
     *args
 ) -> str:
     """Format user input menjadi payload yang rapi untuk dikirim ke LLM."""
+    # ── PRIORITAS: PR — Dinamis A–F (cek SEBELUM dispatch berbasis len(args)) ──
+    # Harus di atas semua if len(args)==N agar PR+5/6 args tidak salah masuk branch lain.
+    if task_type == "PR":
+        args_list = list(args)
+        user_ask = args_list[0] if args_list else ""
+        responses = args_list[1:]
+        payload = f"USER ASK:\n{user_ask}"
+        has_any_response = False
+        for i, resp in enumerate(responses):
+            if resp and resp.strip():
+                label = chr(65 + i)  # A, B, C, D, E, F
+                payload += f"\n\nRESPONSE {label}:\n{resp}"
+                has_any_response = True
+        if not has_any_response:
+            payload += "\n\n[Tidak ada response yang dikirim]"
+        return payload
+
     if len(args) == 6:
         # PSR vs Writing QA (keduanya punya 6 args)
         if task_type == "TA_PERSONALIZED_SMART_REPLY":
@@ -190,8 +207,7 @@ def _format_user_input(
             payload += f"\n\n[RESPONSE C]\n{resp_c}"
         return payload
 
-    # ── DEFAULT: PR, TC, AFM, CYU website, dan lainnya ───────────────────
-    # Berlaku juga untuk AFM (user_ask=User Input, resp_a=Response)
+    # ── DEFAULT: TC, AFM, CYU website, dan lainnya ───────────────────────
     payload = f"USER ASK:\n{user_ask}\n\nRESPONSE A:\n{resp_a}"
     if resp_b:
         payload += f"\n\nRESPONSE B:\n{resp_b}"

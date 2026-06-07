@@ -241,11 +241,21 @@ async def next_to_resp_c(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return COLLECTING_RESP_B
 
-    await update.message.reply_text(
-        "📥 **Langkah 4/4**: Kirim **Response C** (Opsional).\n"
-        "Ketik **/next** untuk memproses, atau **/skip** jika tidak ada Response C.",
-        parse_mode="Markdown",
-    )
+    task_code = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    is_pr = (task_code == "PR")
+
+    if is_pr:
+        msg = (
+            "📥 **Langkah 4**: Kirim **Response C** (Opsional).\n"
+            "Setelah selesai, ketik **/next** untuk lanjut ke D/E/F, atau **/skip** jika tidak ada Response C.\n"
+            "Ketik **/proceed** kapan saja untuk langsung memproses."
+        )
+    else:
+        msg = (
+            "📥 **Langkah 4/4**: Kirim **Response C** (Opsional).\n"
+            "Ketik **/next** untuk memproses, atau **/skip** jika tidak ada Response C."
+        )
+    await update.message.reply_text(msg, parse_mode="Markdown")
     return COLLECTING_RESP_C
 
 
@@ -255,6 +265,31 @@ async def collect_resp_c(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         context.user_data.get('temp_resp_c', "") + "\n" + text
     ).strip()
     return COLLECTING_RESP_C
+
+
+async def next_to_d_or_evaluate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Handler /next di state COLLECTING_RESP_C.
+    - PR: Simpan C lalu masuk dynamic mode (COLLECTING_DYNAMIC_RESP) untuk D/E/F opsional.
+    - Non-PR: Langsung evaluasi (perilaku lama).
+    """
+    task_code = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+
+    if task_code != "PR":
+        # Perilaku lama untuk non-PR
+        return await process_segmented_input(update, context)
+
+    # PR: Switch ke dynamic mode untuk D/E/F
+    context.user_data['pr_phase2'] = True
+    context.user_data['dynamic_resps'] = []
+    context.user_data['current_dynamic_resp'] = ""
+    await update.message.reply_text(
+        "📥 **Response D** (Opsional).\n"
+        "Kirim teks Response D, lalu ketik **/next** untuk E, **/next** lagi untuk F.\n"
+        "Ketik **/proceed** jika sudah selesai.",
+        parse_mode="Markdown",
+    )
+    return COLLECTING_DYNAMIC_RESP
 
 
 async def collect_dynamic_resp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -342,7 +377,21 @@ async def process_dynamic_input(update: Update, context: ContextTypes.DEFAULT_TY
         context.user_data['current_dynamic_resp'] = ""
 
     task_type = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
-    
+
+    # ── PR Phase 2: Gabungkan A/B/C (segmented) + D/E/F (dynamic) ────────
+    if task_type == "PR" and context.user_data.get('pr_phase2'):
+        user_ask  = context.user_data.get('temp_user_ask', "")
+        resp_a    = context.user_data.get('temp_resp_a', "")
+        resp_b    = context.user_data.get('temp_resp_b', "")
+        resp_c    = context.user_data.get('temp_resp_c', "")
+        extra     = context.user_data.get('dynamic_resps', [])  # D, E, F
+        if not resp_a:
+            await update.message.reply_text("❌ Data belum lengkap. Response A wajib diisi.")
+            return COLLECTING_DYNAMIC_RESP
+        args = [user_ask, resp_a, resp_b, resp_c] + extra
+        context.user_data['pr_phase2'] = False
+        return await _do_evaluation(update, context, *args)
+
     if task_type == "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS":
         resps = context.user_data.get('dynamic_resps', [])
         orig = context.user_data.get('temp_user_ask', "")
@@ -411,9 +460,12 @@ async def force_done_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     r_a = context.user_data.get('temp_resp_a', "")
     r_b = context.user_data.get('temp_resp_b', "")
     r_c = context.user_data.get('temp_resp_c', "")
-    
+    # PR phase2: sertakan juga D/E/F dari dynamic buffer jika ada
+    task_code = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
+    extra = context.user_data.get('dynamic_resps', []) if task_code == "PR" else []
+
     if u_ask and r_a and r_b:
-        return await _do_evaluation(update, context, u_ask, r_a, r_b, r_c)
+        return await _do_evaluation(update, context, u_ask, r_a, r_b, r_c, *extra)
     
     await update.message.reply_text(
         "❌ Data belum lengkap atau format gagal dikenali.\n"
