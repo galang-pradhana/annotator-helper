@@ -637,10 +637,67 @@ async def call_openrouter_api_multimodal(system_prompt: str, user_text: str, ima
 
 # ── Router & Status ────────────────────────────────────────────────────────────
 
+# Model khusus untuk task yang membutuhkan vision (AFM4 & VCG) via OpenRouter
+OR_MODEL_VISION = "google/gemini-2.5-flash"
+
+
 async def call_ai_engine(system_prompt: str, user_input: str, model_override: str = None) -> str:
     """Legacy wrapper untuk backward compatibility sebelum dihapus."""
     reply, _ = await call_ai_engine_with_cost(system_prompt, user_input, markup=TASK_MARKUP, model_override=model_override)
     return reply
+
+
+async def call_ai_engine_vision_with_cost(
+    system_prompt: str,
+    user_input: str,
+    markup: int,
+    kie_model_override: str = None,
+) -> tuple[str, int]:
+    """
+    Router khusus untuk task yang memerlukan model vision (AFM4 teks-only & fallback).
+    - Engine OpenRouter → SELALU gunakan google/gemini-2.5-flash
+    - Engine Kie.ai     → gunakan kie_model_override (tidak berubah)
+    """
+    engine = os.environ.get("ACTIVE_ENGINE", "openrouter").lower()
+    if engine == "openrouter":
+        # Force model vision, abaikan tier/model biasa
+        reply, cost_usd = await call_openrouter_api(system_prompt, user_input, OR_MODEL_VISION)
+        if reply.startswith(("❌", "⚠️")):
+            return reply, 0
+        return reply, openrouter_cost_to_credits(cost_usd, markup)
+    else:
+        # Kie.ai: gunakan model tier seperti biasa
+        reply, kie_credits = await _call_kie_ai_internal(system_prompt, user_input, kie_model_override)
+        if reply.startswith(("❌", "⚠️")):
+            return reply, 0
+        return reply, kie_cost_to_credits(kie_credits, markup)
+
+
+async def call_ai_engine_vision_multimodal_with_cost(
+    system_prompt: str,
+    user_text: str,
+    images_b64: dict,
+    markup: int,
+    kie_model_override: str = None,
+) -> tuple[str, int]:
+    """
+    Router khusus untuk task multimodal yang memerlukan model vision (VCG & AFM4 dengan gambar).
+    - Engine OpenRouter → SELALU gunakan google/gemini-2.5-flash
+    - Engine Kie.ai     → gunakan kie_model_override (tidak berubah)
+    """
+    engine = os.environ.get("ACTIVE_ENGINE", "openrouter").lower()
+    if engine == "openrouter":
+        # Force model vision, abaikan tier/model biasa
+        reply, cost_usd = await call_openrouter_api_multimodal(system_prompt, user_text, images_b64, OR_MODEL_VISION)
+        if reply.startswith(("❌", "⚠️")):
+            return reply, 0
+        return reply, openrouter_cost_to_credits(cost_usd, markup)
+    else:
+        # Kie.ai: gunakan model tier seperti biasa
+        reply, kie_credits = await _call_kie_ai_internal_multimodal(system_prompt, user_text, images_b64, kie_model_override)
+        if reply.startswith(("❌", "⚠️")):
+            return reply, 0
+        return reply, kie_cost_to_credits(kie_credits, markup)
 
 async def call_ai_engine_with_cost(system_prompt: str, user_input: str, markup: int, model_override: str = None) -> tuple[str, int]:
     """

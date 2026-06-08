@@ -46,6 +46,7 @@ TIER_DISPLAY_RANGES = {
     COLLECTING_DYNAMIC_RESP,
     SELECTING_MODE,
     AGENT_CHAT,
-) = range(23)
+    COLLECTING_AFM4_USER_INPUT,  # State khusus AFM4: menerima teks ATAU gambar sebagai User Input
+) = range(24)
 
 DEPOSIT_ASK_NOMINAL = 100

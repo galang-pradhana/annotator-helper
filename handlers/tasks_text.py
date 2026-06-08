@@ -1,10 +1,11 @@
 import os
+import base64
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
 from database import get_session
 import user_service
-from services.evaluation import _calculate_dynamic_price, _run_evaluation_background, _run_vcg_evaluation_background
+from services.evaluation import _calculate_dynamic_price, _run_evaluation_background, _run_vcg_evaluation_background, _run_afm4_evaluation_background
 from utils.helpers import send_large_message, _split_message, _parse_evaluation_input
 from core.config import *
 logger = logging.getLogger(__name__)
@@ -116,6 +117,90 @@ async def next_process_single_shot(update: Update, context: ContextTypes.DEFAULT
     return COLLECTING_SINGLE_SHOT
 
 
+async def collect_afm4_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Handler state COLLECTING_AFM4_USER_INPUT — khusus untuk task AFM4.
+    Menerima input berupa:
+    - Teks biasa → simpan ke temp_user_ask
+    - Gambar/foto → simpan file_id ke afm4_user_image (untuk multimodal inference)
+    Ketik /next untuk lanjut ke pengiriman Response A.
+    """
+    msg = update.message
+
+    # ── Gambar dikirim sebagai foto ──────────────────────────────────
+    if msg.photo:
+        file_id = msg.photo[-1].file_id
+        context.user_data['afm4_user_image'] = file_id
+        # Caption gambar (jika ada) sebagai konteks teks tambahan
+        if msg.caption:
+            context.user_data['temp_user_ask'] = (
+                context.user_data.get('temp_user_ask', '') + "\n" + msg.caption
+            ).strip()
+        await msg.reply_text(
+            "🖼️ **Gambar diterima sebagai User Input tambahan!**\n"
+            "Gambar bersifat **opsional** — pastikan Anda juga sudah mengirim teks User Prompt.\n\n"
+            "Ketik **/next** untuk lanjut ke Response A (min. 2 response diperlukan).",
+            parse_mode="Markdown",
+        )
+        return COLLECTING_AFM4_USER_INPUT
+
+    # ── Teks biasa ────────────────────────────────────────────────────
+    text = msg.text or ""
+    # Cek format One-Shot (semua input sekaligus)
+    parsed = _parse_evaluation_input(text)
+    if parsed:
+        return await _do_evaluation(update, context, *parsed)
+
+    context.user_data['temp_user_ask'] = (
+        context.user_data.get('temp_user_ask', '') + "\n" + text
+    ).strip()
+    buf_len = len(context.user_data['temp_user_ask'])
+    has_image = bool(context.user_data.get('afm4_user_image'))
+    image_hint = " (+ gambar sudah diterima ✅)" if has_image else " | Gambar opsional: kirim foto jika perlu."
+    await msg.reply_text(
+        f"📨 Teks diterima ({buf_len} karakter){image_hint}\n"
+        "Ketik **/next** jika sudah selesai untuk lanjut ke Response A.",
+        parse_mode="Markdown",
+    )
+    return COLLECTING_AFM4_USER_INPUT
+
+
+async def afm4_next_to_responses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    /next dari state COLLECTING_AFM4_USER_INPUT → lanjut ke Response A.
+    Validasi: user prompt teks WAJIB ada. Gambar bersifat opsional.
+    """
+    has_text = bool(context.user_data.get('temp_user_ask', '').strip())
+    has_image = bool(context.user_data.get('afm4_user_image'))
+
+    # User prompt teks WAJIB — gambar tidak bisa menggantikan teks
+    if not has_text:
+        await update.message.reply_text(
+            "❌ Anda belum mengirim **User Prompt** (teks).\n\n"
+            "Teks User Prompt **wajib** dikirim sebelum lanjut ke Response.\n"
+            "Gambar bersifat opsional dan dapat ditambahkan bersamaan.",
+            parse_mode="Markdown"
+        )
+        return COLLECTING_AFM4_USER_INPUT
+
+    context.user_data['dynamic_resps'] = []
+    context.user_data['current_dynamic_resp'] = ""
+
+    mode_hint = ""
+    if has_image:
+        mode_hint = "🖼️ Mode **Multimodal** aktif (gambar + teks User Prompt akan dikirim ke AI).\n\n"
+
+    await update.message.reply_text(
+        f"{mode_hint}"
+        "📥 **Langkah 2**: Kirim **Response A** (wajib).\n"
+        "Ketik **/next** untuk lanjut ke Response B (wajib), C, dst. (hingga Response G).\n"
+        "⚠️ Minimal **2 response** (A & B) diperlukan sebelum **/proceed**.\n"
+        "Ketik **/proceed** setelah semua response terkirim untuk memproses evaluasi.",
+        parse_mode="Markdown",
+    )
+    return COLLECTING_DYNAMIC_RESP
+
+
 async def next_to_resp_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     task_code = context.user_data.get('SELECTED_SUBTASK') or context.user_data.get('SELECTED_TASK', '')
     first_input_name = "User Ask / Input Utama"
@@ -141,6 +226,8 @@ async def next_to_resp_a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return COLLECTING_USER_ASK
 
     if task_code == "AFM_SAFETY_EVALUATION_AFM4":
+        # Seharusnya sudah ditangani oleh afm4_next_to_responses,
+        # tapi ini fallback jika user masuk dari COLLECTING_USER_ASK biasa
         context.user_data['dynamic_resps'] = []
         context.user_data['current_dynamic_resp'] = ""
         await update.message.reply_text(
@@ -293,7 +380,18 @@ async def next_to_d_or_evaluate(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def collect_dynamic_resp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    text = update.message.text
+    """Mengumpulkan teks atau gambar untuk dynamic response (A, B, C, ... G).
+    Saat ini gambar hanya dicatat sebagai referensi karena response AFM4 adalah teks.
+    """
+    if update.message.photo:
+        # Gambar tidak umum untuk response — tampilkan peringatan
+        await update.message.reply_text(
+            "⚠️ Response harus berupa **teks** (bukan gambar).\n"
+            "Kirim teks response Anda, lalu ketik **/next** atau **/proceed**.",
+            parse_mode="Markdown",
+        )
+        return COLLECTING_DYNAMIC_RESP
+    text = update.message.text or ""
     context.user_data['current_dynamic_resp'] = (
         context.user_data.get('current_dynamic_resp', "") + "\n" + text
     ).strip()
@@ -370,6 +468,7 @@ async def jump_dynamic_resp(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     return COLLECTING_DYNAMIC_RESP
 
 
+
 async def process_dynamic_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     current = context.user_data.get('current_dynamic_resp', "").strip()
     if current:
@@ -423,12 +522,81 @@ async def process_dynamic_input(update: Update, context: ContextTypes.DEFAULT_TY
         b4 = b_responses[3] if len(b_responses) > 3 else ""
         
         return await _do_evaluation(update, context, orig, a1, a2, a3, a4, b1, b2, b3, b4)
+
+    # ── AFM4: Cek apakah ada gambar User Input → gunakan multimodal ──────
+    elif task_type == "AFM_SAFETY_EVALUATION_AFM4":
+        afm4_image_fid = context.user_data.get('afm4_user_image')
+        user_ask = context.user_data.get('temp_user_ask', '')
+        dynamic_resps = context.user_data.get('dynamic_resps', [])
+
+        # Validasi: user prompt teks WAJIB, minimal 2 response (A & B)
+        if not user_ask.strip():
+            await update.message.reply_text(
+                "❌ **User Prompt (teks) belum diisi.**\n"
+                "Kembali ke langkah sebelumnya dan kirim teks User Prompt dulu."
+            )
+            return COLLECTING_DYNAMIC_RESP
+
+        if len(dynamic_resps) < 2:
+            await update.message.reply_text(
+                f"❌ Data belum lengkap. Baru ada **{len(dynamic_resps)} response** — "
+                "minimal **2 response** (A \u0026 B) diperlukan.\n"
+                "Kirim response berikutnya lalu ketik **/next**, atau lanjutkan dengan **/proceed** setelah 2+ response terkirim.",
+                parse_mode="Markdown"
+            )
+            return COLLECTING_DYNAMIC_RESP
+
+        if afm4_image_fid:
+            # Mode Multimodal: download gambar lalu jalankan evaluasi multimodal
+            status_msg = await update.message.reply_text(
+                "⏳ Memproses evaluasi AFM4 (Multimodal)...\n"
+                "📥 Mengunduh gambar User Input..."
+            )
+            tg_id = update.effective_user.id
+            lang_code = context.user_data.get("TARGET_LANGUAGE", "ID")
+            tier = context.user_data.get("SELECTED_TIER", "BASIC")
+
+            try:
+                tg_file = await context.bot.get_file(afm4_image_fid)
+                img_bytes = await tg_file.download_as_bytearray()
+                image_b64 = base64.b64encode(bytes(img_bytes)).decode("utf-8")
+            except Exception as e:
+                logger.error(f"AFM4 image download error: {e}")
+                await status_msg.edit_text(f"❌ Gagal mengunduh gambar: `{e}`\nSilakan coba lagi.")
+                return COLLECTING_DYNAMIC_RESP
+
+            context.application.create_task(
+                _run_afm4_evaluation_background(
+                    update, tg_id, lang_code, tier, task_type, status_msg,
+                    user_ask=user_ask,
+                    responses=dynamic_resps,
+                    image_b64=image_b64,
+                )
+            )
+            context.user_data['in_evaluation'] = False
+            return READY
+        else:
+            # Mode teks biasa
+            args = [user_ask] + dynamic_resps
+            return await _do_evaluation(update, context, *args)
+
     else:
         args = [context.user_data.get('temp_user_ask', "")] + context.user_data.get('dynamic_resps', [])
         if len(args) < 2:
             await update.message.reply_text("❌ Data belum lengkap. Anda harus mengirim setidaknya satu Response.")
             return COLLECTING_DYNAMIC_RESP
         return await _do_evaluation(update, context, *args)
+
+
+async def collect_dynamic_resp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.message.photo:
+        context.user_data['current_dynamic_resp'] = update.message.photo[-1].file_id
+    else:
+        text = update.message.text
+        context.user_data['current_dynamic_resp'] = (
+            context.user_data.get('current_dynamic_resp', "") + "\n" + text
+        ).strip()
+    return COLLECTING_DYNAMIC_RESP
 
 
 async def process_segmented_input(

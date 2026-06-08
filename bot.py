@@ -48,7 +48,7 @@ from core.config import (
     COLLECTING_VCG_PROMPT, COLLECTING_VCG_IMAGE_A, COLLECTING_VCG_IMAGE_B,
     COLLECTING_VCG_IMAGE_C, COLLECTING_VCG_IMAGE_D, COLLECTING_SINGLE_SHOT,
     COLLECTING_VCG_IMAGE_E, COLLECTING_VCG_IMAGE_F, COLLECTING_DYNAMIC_RESP,
-    SELECTING_MODE, AGENT_CHAT,
+    SELECTING_MODE, AGENT_CHAT, COLLECTING_AFM4_USER_INPUT,
     DEPOSIT_ASK_NOMINAL,
 )
 
@@ -66,6 +66,7 @@ from handlers.tasks_text import (
     next_to_resp_b, collect_resp_b, skip_resp_b, next_to_resp_c,
     collect_resp_c, next_to_d_or_evaluate, process_segmented_input, force_done_command,
     collect_dynamic_resp, next_dynamic_resp, process_dynamic_input,
+    collect_afm4_user_input, afm4_next_to_responses,
 )
 from handlers.tasks_vcg import (
     collect_vcg_prompt, vcg_next_to_image_a, collect_vcg_image_a,
@@ -379,6 +380,12 @@ def main():
                 CommandHandler("jump", jump_dynamic_resp),
                 CommandHandler("done", force_done_command),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, collect_dynamic_resp),
+            ],
+            # ── AFM4 Multimodal: User Input bisa teks ATAU gambar ──────────
+            COLLECTING_AFM4_USER_INPUT: [
+                CommandHandler("next", afm4_next_to_responses),
+                MessageHandler(filters.PHOTO, collect_afm4_user_input),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, collect_afm4_user_input),
             ],
             # ── Single-Shot state: PSR & Writing QA ───────────────────────
             COLLECTING_SINGLE_SHOT: [

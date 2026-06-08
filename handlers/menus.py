@@ -1061,14 +1061,18 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "📋 **Cara Input (Pilih salah satu):**\n\n"
                 "🔹 **Opsi 1: All-in-One**\n"
                 "Paste dalam **satu pesan**:\n"
-                "`User Input: [isi]`\n"
-                "`Response A: [isi]`\n"
-                "`Response B: [isi]`\n"
+                "`User Prompt: [isi teks — WAJIB]`\n"
+                "`Response A: [isi — WAJIB]`\n"
+                "`Response B: [isi — WAJIB]`\n"
                 "`...`\n"
-                "`Response G: [isi]` (Bisa diisi hingga Response G)\n"
+                "`Response G: [isi]` (hingga Response G)\n"
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
-                "Kirim **User Input** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst. Akhiri dengan perintah **/proceed** untuk memproses."
+                "🖼️ **User Prompt (teks) WAJIB, gambar bersifat opsional!**\n"
+                "• Kirim **teks User Prompt** terlebih dahulu. Anda bisa mengirim gambar sebagai tambahan (opsional).\n"
+                "• Ketik **/next** untuk lanjut ke Response A.\n"
+                "• Bot akan memandu Anda meminta Response A, B, dst. (Minimal 2 response diperlukan).\n"
+                "• Setelah semua response terkirim, ketik **/proceed** untuk memproses evaluasi."
             )
         elif final_task_code == "CYU_TOPLINE_SUMMARIZATION":
             task_name = "CYU — Topline Summarization"
@@ -1158,6 +1162,9 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
         if final_task_code in SINGLE_SHOT_TASKS:
             return COLLECTING_SINGLE_SHOT
+        elif final_task_code == "AFM_SAFETY_EVALUATION_AFM4":
+            # AFM4 menggunakan state khusus yang support gambar sebagai User Input
+            return COLLECTING_AFM4_USER_INPUT
         else:
             return COLLECTING_USER_ASK
     else:

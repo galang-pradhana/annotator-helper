@@ -8,7 +8,13 @@ from core.config import TIER_MODELS, READY, TIER_DISPLAY_LABELS
 from database import get_session
 import user_service
 from prompt_assembler import assemble_evaluator_prompt
-from kie_api import call_ai_engine_with_cost, call_ai_engine_multimodal_with_cost, TASK_MARKUP
+from kie_api import (
+    call_ai_engine_with_cost,
+    call_ai_engine_multimodal_with_cost,
+    call_ai_engine_vision_with_cost,
+    call_ai_engine_vision_multimodal_with_cost,
+    TASK_MARKUP,
+)
 from utils.helpers import send_large_message, _retry_telegram_call
 from utils.helpers import send_large_message, _retry_telegram_call
 
@@ -261,10 +267,20 @@ async def _run_evaluation_background(
     user_input_payload = _format_user_input(task_type, *args)
 
     # 3. Panggil API LLM — Refund Logic: TIDAK potong saldo jika gagal
+    # Khusus AFM4: gunakan model vision (google/gemini-2.5-flash via OpenRouter)
+    is_afm4 = (task_type == "AFM_SAFETY_EVALUATION_AFM4")
     try:
-        llm_response, price = await call_ai_engine_with_cost(
-            system_prompt=evaluator_prompt, user_input=user_input_payload, markup=TASK_MARKUP, model_override=model
-        )
+        if is_afm4:
+            llm_response, price = await call_ai_engine_vision_with_cost(
+                system_prompt=evaluator_prompt,
+                user_input=user_input_payload,
+                markup=TASK_MARKUP,
+                kie_model_override=model,
+            )
+        else:
+            llm_response, price = await call_ai_engine_with_cost(
+                system_prompt=evaluator_prompt, user_input=user_input_payload, markup=TASK_MARKUP, model_override=model
+            )
     except Exception as e:
         logger.error(f"API call error: {e}")
         try:
@@ -449,14 +465,14 @@ async def _run_vcg_evaluation_background(
         f"🖼️ Mengirim {img_count} gambar ke AI..."
     )
 
-    # Panggil API multimodal
+    # Panggil API multimodal — VCG selalu pakai model vision (google/gemini-2.5-flash via OpenRouter)
     try:
-        llm_response, price = await call_ai_engine_multimodal_with_cost(
+        llm_response, price = await call_ai_engine_vision_multimodal_with_cost(
             system_prompt=evaluator_prompt,
             user_text=user_input_text,
             images_b64=images_b64,
             markup=TASK_MARKUP,
-            model_override=model,
+            kie_model_override=model,
         )
     except Exception as e:
         logger.error(f"VCG API error: {e}")
@@ -518,6 +534,145 @@ async def _run_vcg_evaluation_background(
     )
 
     # ── TASK 4: Low Balance Notification ──────────────────────────
+    if remaining < 100:
+        await update.message.reply_text(
+            f"⚠️ **Sisa saldo Anda hampir habis ({remaining:,} Poin).**\n"
+            "Harap hubungi Admin untuk top-up pengerjaan selanjutnya.",
+            parse_mode="Markdown"
+        )
+
+
+async def _run_afm4_evaluation_background(
+    update,
+    tg_id: int,
+    lang_code: str,
+    tier: str,
+    task_type: str,
+    status_msg,
+    user_ask: str,
+    responses: list,
+    image_b64: str,
+):
+    """
+    Background task: evaluasi AFM4 dalam mode MULTIMODAL.
+    User Input berupa gambar dikirim bersama response-response teks ke LLM.
+
+    Args:
+        user_ask: Teks User Input (bisa kosong jika hanya gambar)
+        responses: List teks response (A, B, C, ... G)
+        image_b64: Base64-encoded gambar User Input
+    """
+    model = TIER_MODELS.get(tier, "gemini-2.5-pro")
+
+    # 0. Balance pre-check
+    async with get_session() as session:
+        has_balance = await user_service.check_balance(session, tg_id, 5)
+    if not has_balance:
+        await status_msg.edit_text(
+            "❌ Saldo tidak mencukupi (Minimum 5 Poin).\nHubungi Admin untuk top-up."
+        )
+        return
+
+    # 1. Rakit evaluator prompt
+    try:
+        evaluator_prompt = assemble_evaluator_prompt(lang_code, task_type)
+    except FileNotFoundError as e:
+        await status_msg.edit_text(f"❌ Error: {e}")
+        return
+
+    # 2. Susun user input payload (teks)
+    payload_parts = []
+    if user_ask:
+        payload_parts.append(f"USER INPUT (TEXT):\n{user_ask}")
+    payload_parts.append("[Gambar User Input dilampirkan di atas — lihat gambar untuk konteks]")
+    for i, resp in enumerate(responses):
+        if resp and resp.strip():
+            label = chr(65 + i)
+            payload_parts.append(f"RESPONSE {label}:\n{resp}")
+
+    user_input_text = "\n\n".join(payload_parts)
+
+    await status_msg.edit_text(
+        "⏳ Memproses evaluasi AFM4 (Multimodal)...\n"
+        f"✅ Evaluator prompt dirakit ({len(evaluator_prompt):,} karakter)\n"
+        f"🖼️ Mengirim gambar + {len(responses)} response ke AI..."
+    )
+
+    # 3. Panggil API multimodal — AFM4 selalu pakai model vision (google/gemini-2.5-flash via OpenRouter)
+    images_b64 = {"User Input Image": image_b64}
+    try:
+        llm_response, price = await call_ai_engine_vision_multimodal_with_cost(
+            system_prompt=evaluator_prompt,
+            user_text=user_input_text,
+            images_b64=images_b64,
+            markup=TASK_MARKUP,
+            kie_model_override=model,
+        )
+    except Exception as e:
+        logger.error(f"AFM4 multimodal API error: {e}")
+        try:
+            await _retry_telegram_call(
+                status_msg.edit_text,
+                "❌ **Sistem sibuk, saldo tidak dipotong.**\n"
+                f"Detail: `{type(e).__name__}: {e}`"
+            )
+        except Exception:
+            pass
+        return
+
+    if llm_response.startswith(("❌", "⚠️")):
+        try:
+            await _retry_telegram_call(
+                status_msg.edit_text,
+                f"❌ **Sistem error, saldo tidak dipotong.**\n{llm_response}"
+            )
+        except Exception:
+            pass
+        return
+
+    try:
+        await _retry_telegram_call(status_msg.edit_text, "✅ Respons AFM4 diterima! Memotong saldo...")
+    except Exception:
+        pass
+
+    # 4. SUKSES: Potong saldo & Simpan History
+    eval_id = 0
+    try:
+        async with get_session() as session:
+            remaining = await user_service.deduct_balance(
+                session, tg_id, price, task_type, model
+            )
+            db_content = _extract_database_content(llm_response)
+            eval_record = await user_service.add_evaluation(
+                session, tg_id, task_type, user_input_text, db_content
+            )
+            if eval_record:
+                eval_id = eval_record.id
+    except ValueError as e:
+        await status_msg.edit_text(f"❌ Gagal potong saldo: {e}")
+        return
+    except Exception as e:
+        logger.error(f"Deduction/History error: {e}")
+        await status_msg.edit_text(
+            "⚠️ Respons berhasil diterima tapi gagal memproses data saldo/history.\nHubungi Admin."
+        )
+        remaining = 0
+
+    # 5. Kirim hasil akhir ke user
+    try:
+        await _retry_telegram_call(status_msg.delete)
+    except Exception as e:
+        logger.warning(f"[AFM4] Gagal hapus status_msg: {e}")
+    disclaimer_html, footer_html, reply_markup = _build_result_ui(tier, price, remaining, eval_id)
+
+    await send_large_message(
+        update,
+        llm_response,
+        disclaimer=disclaimer_html,
+        footer=footer_html,
+        reply_markup=reply_markup
+    )
+
     if remaining < 100:
         await update.message.reply_text(
             f"⚠️ **Sisa saldo Anda hampir habis ({remaining:,} Poin).**\n"
