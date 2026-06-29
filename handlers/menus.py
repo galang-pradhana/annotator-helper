@@ -945,6 +945,7 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         "CYU_WEBSITE_TOPIC",
         "CYU_TOPLINE_SUMMARIZATION",
         "CYU_ACTION_ITEMS",
+        "CYU_TOPIC_SUMMARIZATION",
         "TC_MESSAGE_REPLY",
         "TC_PROOFREADING",
         "WRITING_TOOL_PROOFREAD_V2",
@@ -1103,6 +1104,23 @@ async def mulai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 "Lalu ketik **/next**.\n\n"
                 "🔹 **Opsi 2: Bertahap**\n"
                 "Kirim **Instruction** dan **Original Input Text** saja dulu, lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
+            )
+        elif final_task_code == "CYU_TOPIC_SUMMARIZATION":
+            task_name = "CYU — Topic Summarization"
+            detail = (
+                "📋 **Cara Input (Pilih salah satu):**\n\n"
+                "🔹 **Opsi 1: All-in-One (Cepat)**\n"
+                "Paste format ini dalam **satu pesan**:\n"
+                "`Instruction: [isi]`\n"
+                "`Original Input Text: [isi notifikasi]`\n"
+                "`Response A: [isi]`\n"
+                "`Response B: [isi]`\n"
+                "`Response C: [isi — opsional]`\n"
+                "(hingga Response G jika ada)\n"
+                "Lalu ketik **/next**.\n\n"
+                "🔹 **Opsi 2: Bertahap**\n"
+                "Kirim **Instruction** dan **Original Input Text** (notifikasi) saja dulu, "
+                "lalu ketik **/next**. Bot akan memandu Anda meminta Response A, B, dst."
             )
         elif "CYU" in final_task_code:
             task_name = "CYU — Website Topic"
