@@ -377,6 +377,7 @@ async def task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             [InlineKeyboardButton("🌐 CYU Website Topic", callback_data="sub_CYU_WEBSITE_TOPIC")],
             [InlineKeyboardButton("📄 CYU Topline Summarization", callback_data="sub_CYU_TOPLINE_SUMMARIZATION")],
             [InlineKeyboardButton("📝 CYU Action Items", callback_data="sub_CYU_ACTION_ITEMS")],
+            [InlineKeyboardButton("🔔 CYU Topic Summarization", callback_data="sub_CYU_TOPIC_SUMMARIZATION")],
             [InlineKeyboardButton("🔙 Kembali", callback_data="back_task")],
         ]
         await query.edit_message_text(
@@ -567,6 +568,18 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
             "Evaluate Groundedness & Comprehensiveness",
             "Satisfaction Rating & Pairwise Comparison"
         ],
+        "CYU_TOPIC_SUMMARIZATION": [
+            "Skip Check (gibberish/expertise/UI/foreign language)",
+            "Notepad: Input Type, Locale, Expected Separator, Latest vs Older notifs",
+            "Evaluate Original Input (Irregularity & Safety/Harmfulness)",
+            "Safety/Harmfulness per Response (3.1, 3.1.2, 3.1.3)",
+            "Comprehensiveness — based on LATEST notifications only (3.2.1)",
+            "Groundedness (3.3.1 & 3.3.2 — hallucination/inaccuracy check)",
+            "Composition & Localization — locale separator rules (3.4.1)",
+            "Satisfaction Rating (3.5 — HS/SS/SU/HU)",
+            "Pairwise Comparison (4.1 A↔B, optional 4.2 & 4.3)",
+            "Essay & Final Comment (4.4 — in English)"
+        ],
         # VCG — Visual Content Generation
         "VCG_ADM_BASE_CREATION": [
             "Safety Flags (Violent/Sexual/Offensive/Trademarked/etc.)",
@@ -706,6 +719,7 @@ def _get_confirmation_ui(task_code: str) -> tuple[str, InlineKeyboardMarkup]:
         "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
         "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS": "TA/TC — Contextual Synonyms",
         "CYU_ACTION_ITEMS": "CYU — Action Items",
+        "CYU_TOPIC_SUMMARIZATION": "CYU — Topic Summarization",
         "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
         "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
     }
@@ -785,6 +799,7 @@ async def confirm_task_callback(update: Update, context: ContextTypes.DEFAULT_TY
         "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
         "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS": "TA/TC — Contextual Synonyms",
         "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
+        "CYU_TOPIC_SUMMARIZATION": "CYU — Topic Summarization",
     }
     main_task = context.user_data.get("SELECTED_TASK", "PR")
     sub_task = context.user_data.get("SELECTED_SUBTASK")

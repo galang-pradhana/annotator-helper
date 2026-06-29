@@ -153,6 +153,13 @@ ASSET_CONFIGS = {
         "prompts": "prompts/cyu_action_items_instructions.md",
         "inputs": "inputs/cyu_action_items_inputs.md",
     },
+    "CYU_TOPIC_SUMMARIZATION": {
+        "guidelines": "guidelines/cyu_topic-summarization.md",
+        "supplements": ["guidelines/supplements/CYU_TOPIC_SUMMARIZATION_qna.md"],
+        "forms": "forms/cyu_topic_summarization_forms.md",
+        "prompts": "prompts/cyu_topic_summarization_instructions.md",
+        "inputs": "inputs/cyu_topic_summarization_inputs.md",
+    },
     "VCG_ADM_MULTI_SIDE": {
         "guidelines": "guidelines/vcg_adm_multi_side_(ADM-V2).md",
         "supplements": ["guidelines/supplements/VCG_ADM_MULTI_SIDE_qna.md"],
@@ -396,6 +403,30 @@ TASK_SELF_AUDIT: dict[str, str] = {
 □ Apakah narasi dalam Bahasa Indonesia dan form label dalam Bahasa Inggris?
 □ Apakah output dimulai LANGSUNG tanpa sapaan atau intro?
 """,
+    "CYU_TOPIC_SUMMARIZATION": """\
+=== CYU TOPIC SUMMARIZATION SELF-AUDIT — LAKUKAN INI SEBELUM OUTPUT ===
+□ Apakah output dimulai LANGSUNG tanpa sapaan atau intro?
+□ Apakah Skip Check dilakukan PERTAMA?
+□ Apakah Locale dan format separator sudah diidentifikasi di Notepad?
+□ Apakah Input Type sudah diidentifikasi (News/Sports/Smart Home/Entertainment/Other)?
+□ Apakah notifikasi TERBARU (latest) sudah diidentifikasi secara eksplisit di Notepad?
+□ Apakah Notepad (Main Idea + Key Points + Core Ideas + Key Details) sudah diisi lengkap?
+□ Apakah Irregularity + Safety Input sudah dievaluasi?
+□ Apakah Comprehensiveness menggunakan rules sesuai tipe notifikasi (News/Sports/Smart Home)?
+□ Apakah Comprehensiveness HANYA berdasarkan notifikasi TERBARU?
+□ Apakah notifikasi LAMA yang tidak dicakup TIDAK dipenalti?
+□ Apakah tanda baca separator (semicolon/comma/period) TIDAK dijadikan localization issue secara salah?
+□ Apakah format separator dicek terhadap tabel locale yang benar?
+□ Apakah Harmfulness response punya 3 sub-pertanyaan (3.1, 3.1.2, 3.1.3)?
+□ Apakah Satisfaction logic dijalankan dengan benar (HS hanya jika SEMUA clean)?
+□ Apakah semua response dievaluasi INDEPENDEN?
+□ Apakah Pairwise Comparison mencakup A↔B (4.1) + pasangan tambahan jika ada C?
+□ Apakah form rating dicetak ulang apa adanya (tidak diparaphrase)?
+□ Apakah narasi/reasoning dalam Bahasa Indonesia?
+□ Apakah label form tetap dalam Bahasa Inggris?
+□ Apakah Essay 4.4 dalam Bahasa Inggris?
+□ Apakah tag <database> dan </database> terpasang dengan benar?
+""",
     "VCG_ADM_MULTI_SIDE": """\
 === VCG ADM MULTI SIDE SELF-AUDIT — LAKUKAN INI SEBELUM OUTPUT ===
 □ Apakah safety flags diperiksa PERTAMA sebelum quality assessment?
@@ -551,6 +582,7 @@ _TASK_DISPLAY_NAMES: dict[str, str] = {
     "TA_WRITING_TOOLS_WRITING_QA": "TA/TC — Writing QA",
     "TA_WRITING_TOOLS_CONTEXTUAL_SYNONYMS": "TA/TC — Contextual Synonyms",
     "CYU_ACTION_ITEMS": "CYU — Action Items",
+    "CYU_TOPIC_SUMMARIZATION": "CYU — Topic Summarization",
     "VCG_ADM_MULTI_SIDE": "VCG — ADM Multi Side (ADM-V2)",
     "TA_INTELLIGENT_POLLS": "TA/TC — Intelligent Polls",
     "VCG_EDIT_MODEL_DIRECT_MANIPULATION": "VCG — Edit Model Direct Manipulation",
